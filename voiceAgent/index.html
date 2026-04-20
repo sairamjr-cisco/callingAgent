@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent Call Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .pulse-ring { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Floating Log Button -->
+    <button onclick="document.getElementById('logModal').classList.remove('hidden')" class="fixed bottom-6 right-6 bg-slate-800 text-white p-3 rounded-full shadow-lg hover:bg-slate-700 transition-colors z-40" title="View Debug Logs">
+        <i data-lucide="terminal" class="w-6 h-6"></i>
+    </button>
+
+    <!-- Log Modal -->
+    <div id="logModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl w-full max-w-3xl flex flex-col h-[80vh] shadow-2xl">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="terminal" class="w-5 h-5"></i> System Activity Logs
+                </h2>
+                <button onclick="document.getElementById('logModal').classList.add('hidden')" class="text-slate-500 hover:text-slate-800 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 p-4 overflow-hidden flex flex-col bg-slate-900">
+                <pre id="logContent" class="flex-1 text-green-400 rounded-lg overflow-y-auto text-xs font-mono whitespace-pre-wrap leading-relaxed pb-4"></pre>
+            </div>
+            <div class="p-4 border-t bg-slate-50 rounded-b-xl flex justify-between items-center">
+                <span class="text-xs text-slate-500 font-medium">Logs are not saved permanently.</span>
+                <button onclick="downloadLogs()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download Logs (.txt)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+        <!-- Header -->
+        <div class="bg-indigo-600 p-6 text-white text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDBMOCA4Wk04IDBMMCA4WiIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD4KPC9zdmc+')]"></div>
+            <div class="relative z-10">
+                <div class="bg-indigo-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i data-lucide="contact" class="text-white w-8 h-8"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">AI Campaign Manager</h1>
+                <p class="text-indigo-100 text-sm mt-1">Multi-Contact Auto-Listen Operator</p>
+            </div>
+        </div>
+
+        <!-- Form Area -->
+        <div class="p-6 space-y-4" id="formArea">
+            <div id="errorBox" class="hidden bg-red-50 border-l-4 border-red-500 p-3 rounded-r-md text-red-700 text-sm"></div>
+
+            <div>
+                <label for="publicUrl" class="block text-sm font-medium text-slate-700 mb-1">Public URL (Cloudflare / Ngrok)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="globe" class="h-5 w-5 text-slate-400"></i>
+                    </div>
+                    <input type="url" id="publicUrl" class="pl-10 w-full rounded-lg border-slate-300 border px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="https://your-tunnel.trycloudflare.com">
+                </div>
+            </div>
+
+            <div>
+                <label for="callDelay" class="block text-sm font-medium text-slate-700 mb-1">Delay Between Calls (Seconds)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="timer" class="h-5 w-5 text-slate-400"></i>
+                    </div>
+                    <input type="number" id="callDelay" class="pl-10 w-full rounded-lg border-slate-300 border px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="5" value="5" min="0">
+                </div>
+            </div>
+
+            <div class="border-t border-slate-200 pt-3">
+                <label class="block text-sm font-medium text-slate-700 mb-1">1. Upload Phone Numbers (Excel)</label>
+                <input type="file" id="contactsFile" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 border border-slate-300 rounded-lg">
+                <p class="text-xs text-slate-500 mt-1">Headers required: <b>Phone</b>, <b>Type</b></p>
+            </div>
+
+            <div class="pt-2">
+                <label class="block text-sm font-medium text-slate-700 mb-1">2. Upload Questions Script (Excel)</label>
+                <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 border border-slate-300 rounded-lg">
+                <p class="text-xs text-slate-500 mt-1">Headers required: <b>Question</b>, <b>Yes</b>, <b>No</b>, <b>Type</b>, <b>Action</b> (next/end)</p>
+            </div>
+
+            <button id="startCallBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition-all flex items-center justify-center space-x-2 mt-4">
+                <i data-lucide="phone-outgoing" class="w-5 h-5"></i>
+                <span>Start Calling Campaign</span>
+            </button>
+        </div>
+
+        <!-- Active Call Area (Hidden initially) -->
+        <div id="callArea" class="hidden p-6 flex flex-col items-center space-y-4 bg-slate-900 text-white min-h-[400px]">
+            <div id="campaignProgress" class="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-2">Contact 1 of X</div>
+            <div id="targetDisplay" class="text-xl font-bold tracking-wider"></div>
+            <div id="contactTypeDisplay" class="text-sm text-slate-400 mb-1">Script Type: ...</div>
+            <div id="callStatusText" class="text-slate-200 text-xs font-medium tracking-wide uppercase text-center leading-tight">Connecting...</div>
+
+            <div class="relative w-20 h-20 my-2 flex items-center justify-center">
+                <div id="callRing" class="absolute inset-0 rounded-full border-4 border-indigo-500 opacity-50 pulse-ring"></div>
+                <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center z-10 shadow-xl border border-slate-700">
+                    <i data-lucide="user" class="w-8 h-8 text-slate-400"></i>
+                </div>
+            </div>
+
+            <!-- Excel Script Area -->
+            <div id="excelScriptArea" class="hidden w-full mt-2 bg-indigo-900 p-4 rounded-xl border border-indigo-700 text-left">
+                <div class="text-xs text-indigo-300 font-semibold mb-1 uppercase tracking-wide flex justify-between">
+                    <span>Script Step <span id="stepCounter">1</span></span>
+                    <span id="scriptProgress" class="text-indigo-400"></span>
+                </div>
+                <div id="currentQuestion" class="text-base font-medium text-white mb-3 leading-snug">Question goes here?</div>
+                
+                <button id="speakQuestionBtn" class="w-full mb-3 bg-blue-600 hover:bg-blue-500 text-white px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center space-x-2">
+                    <i data-lucide="play" class="w-4 h-4"></i> <span id="speakBtnText">Ask & Auto-Listen</span>
+                </button>
+
+                <div class="grid grid-cols-2 gap-2 transition-all" id="answerButtonsRow">
+                    <!-- Manual override buttons -->
+                    <button id="answerYesBtn" class="bg-green-700 hover:bg-green-600 text-white px-2 py-2 rounded-lg text-sm font-semibold transition-all flex flex-col items-center justify-center text-center">
+                        <span>YES Path</span>
+                        <span class="text-[10px] text-green-200 font-normal mt-0.5 line-clamp-2 w-full" id="yesPreview">...</span>
+                    </button>
+                    <button id="answerNoBtn" class="bg-red-700 hover:bg-red-600 text-white px-2 py-2 rounded-lg text-sm font-semibold transition-all flex flex-col items-center justify-center text-center">
+                        <span>NO Path</span>
+                        <span class="text-[10px] text-red-200 font-normal mt-0.5 line-clamp-2 w-full" id="noPreview">...</span>
+                    </button>
+                </div>
+
+                <div id="transcriptBox" class="hidden mt-3 p-3 bg-slate-800 rounded-lg text-sm text-slate-200 border border-slate-700 text-center shadow-inner">
+                    <span class="font-semibold text-slate-400 text-xs uppercase block mb-1">Customer Said:</span> 
+                    <span id="heardText" class="italic text-yellow-300">"..."</span>
+                </div>
+
+                <!-- Next Contact Button (Appears when script finishes) -->
+                <button id="nextContactBtn" class="hidden w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-3 rounded-lg text-sm font-bold transition-colors flex items-center justify-center space-x-2 shadow-lg">
+                    <span>Call Next Contact</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Live Speech Input (Manual fallback) -->
+            <div class="w-full mt-4 bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <label class="block text-xs font-medium text-slate-400 mb-2">Manual override text:</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="liveSpeechInput" class="flex-1 rounded-lg bg-slate-900 border-slate-700 border px-3 py-2 text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="Type custom speech...">
+                    <button id="speakBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">Speak</button>
+                </div>
+            </div>
+
+            <button id="endCallBtn" class="mt-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all flex items-center justify-center">
+                <i data-lucide="phone-off" class="w-6 h-6"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Logging System Setup
+        const systemLogs = [];
+        const logContentEl = document.getElementById('logContent');
+
+        function addLog(msg, type = 'INFO') {
+            const timestamp = new Date().toLocaleTimeString();
+            let colorClass = '';
+            
+            if (type === 'ERROR') colorClass = 'text-red-400 font-bold';
+            else if (type === 'WARN') colorClass = 'text-yellow-400';
+            else if (type === 'SUCCESS') colorClass = 'text-green-400 font-bold';
+            else colorClass = 'text-slate-300';
+
+            const formattedMsg = `[${timestamp}] [${type}] ${msg}`;
+            systemLogs.push(formattedMsg);
+
+            // Update UI Console
+            const span = document.createElement('span');
+            span.className = `block ${colorClass}`;
+            span.textContent = formattedMsg;
+            logContentEl.appendChild(span);
+            logContentEl.scrollTop = logContentEl.scrollHeight;
+
+            console.log(`%c${formattedMsg}`, type === 'ERROR' ? 'color: red' : type === 'WARN' ? 'color: orange' : 'color: inherit');
+        }
+
+        function downloadLogs() {
+            addLog("Downloading log file...", "INFO");
+            const blob = new Blob([systemLogs.join('\n')], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voice_agent_logs_${new Date().getTime()}.txt`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Initialize application logs
+        addLog("Application started.", "SUCCESS");
+
+        const formArea = document.getElementById('formArea');
+        const callArea = document.getElementById('callArea');
+        const contactsFile = document.getElementById('contactsFile');
+        const publicUrlInput = document.getElementById('publicUrl');
+        const callDelayInput = document.getElementById('callDelay');
+        const startCallBtn = document.getElementById('startCallBtn');
+        const endCallBtn = document.getElementById('endCallBtn');
+        const errorBox = document.getElementById('errorBox');
+        
+        const campaignProgress = document.getElementById('campaignProgress');
+        const callStatusText = document.getElementById('callStatusText');
+        const targetDisplay = document.getElementById('targetDisplay');
+        const contactTypeDisplay = document.getElementById('contactTypeDisplay');
+        const callRing = document.getElementById('callRing');
+        
+        const liveSpeechInput = document.getElementById('liveSpeechInput');
+        const speakBtn = document.getElementById('speakBtn');
+
+        const excelFile = document.getElementById('excelFile');
+        const excelScriptArea = document.getElementById('excelScriptArea');
+        const stepCounter = document.getElementById('stepCounter');
+        const scriptProgress = document.getElementById('scriptProgress');
+        const currentQuestionText = document.getElementById('currentQuestion');
+        
+        const speakQuestionBtn = document.getElementById('speakQuestionBtn');
+        const answerYesBtn = document.getElementById('answerYesBtn');
+        const answerNoBtn = document.getElementById('answerNoBtn');
+        const yesPreview = document.getElementById('yesPreview');
+        const noPreview = document.getElementById('noPreview');
+        const transcriptBox = document.getElementById('transcriptBox');
+        const heardText = document.getElementById('heardText');
+        const nextContactBtn = document.getElementById('nextContactBtn');
+
+        let currentCallSid = null;
+        let callTimeout = null;
+        let pollingInterval = null;
+        let lastPolledState = null;
+        
+        // Campaign Data
+        let contactsData = [];
+        let scriptData = [];
+        let filteredScriptData = [];
+        let currentContactIndex = 0;
+        let currentStepIndex = 0;
+
+        // Parse Contacts
+        contactsFile.addEventListener('change', (e) => {
+            addLog("Contacts file selected, attempting to read...", "INFO");
+            const file = e.target.files[0];
+            if (!file) { contactsData = []; return; }
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const workbook = XLSX.read(evt.target.result, {type: 'binary'});
+                    const excelRows = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[workbook.SheetNames[0]]);
+                    contactsData = excelRows.map(row => ({
+                        phone: String(row['Phone'] || row['phone'] || row['Number'] || '').trim(),
+                        type: String(row['Type'] || row['type'] || row['TYPE'] || '').trim()
+                    })).filter(row => row.phone !== 'undefined' && row.phone !== '');
+                    
+                    if (contactsData.length > 0) {
+                        showError(`Loaded ${contactsData.length} contacts successfully!`, true);
+                        addLog(`Successfully parsed ${contactsData.length} contacts from Excel.`, "SUCCESS");
+                    } else {
+                        showError("No contacts found. Check columns: Phone, Type");
+                        addLog("Contacts file read, but 0 valid rows found. Please check headers.", "WARN");
+                    }
+                } catch(err) { 
+                    showError("Error reading Contacts Excel file."); 
+                    addLog(`Error parsing contacts file: ${err.message}`, "ERROR");
+                }
+            };
+            reader.readAsBinaryString(file);
+        });
+
+        // Parse Script
+        excelFile.addEventListener('change', (e) => {
+            addLog("Script file selected, attempting to read...", "INFO");
+            const file = e.target.files[0];
+            if (!file) { scriptData = []; return; }
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const workbook = XLSX.read(evt.target.result, {type: 'binary'});
+                    const excelRows = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[workbook.SheetNames[0]]);
+                    scriptData = excelRows.map(row => ({
+                        question: row['Question'] || row['question'] || row['QUESTION'] || '',
+                        yes: row['Yes'] || row['yes'] || row['If Yes'] || row['Yes Response'] || '',
+                        no: row['No'] || row['no'] || row['If No'] || row['No Response'] || '',
+                        type: String(row['Type'] || row['type'] || row['TYPE'] || '').trim(),
+                        action: String(row['Action'] || row['action'] || row['ACTION'] || row['Next/End'] || 'next').trim().toLowerCase()
+                    })).filter(row => row.question !== 'undefined' && row.question !== '');
+                    
+                    if (scriptData.length > 0) {
+                        showError(`Loaded ${scriptData.length} questions successfully!`, true);
+                        addLog(`Successfully parsed ${scriptData.length} questions from Script Excel.`, "SUCCESS");
+                    } else {
+                        showError("No questions found. Check columns: Question, Yes, No, Type, Action");
+                        addLog("Script file read, but 0 valid rows found. Please check headers.", "WARN");
+                    }
+                } catch(err) { 
+                    showError("Error reading Script Excel file."); 
+                    addLog(`Error parsing script file: ${err.message}`, "ERROR");
+                }
+            };
+            reader.readAsBinaryString(file);
+        });
+
+        function showError(msg, isSuccess=false) {
+            errorBox.innerText = msg;
+            errorBox.className = isSuccess ? "bg-green-50 border-l-4 border-green-500 p-3 rounded-r-md text-green-700 text-sm mb-4 block" : "bg-red-50 border-l-4 border-red-500 p-3 rounded-r-md text-red-700 text-sm mb-4 block";
+            errorBox.classList.remove('hidden');
+            setTimeout(() => errorBox.classList.add('hidden'), 4000);
+        }
+
+        startCallBtn.addEventListener('click', () => {
+            const publicUrl = publicUrlInput.value.trim();
+            addLog("Start Campaign button clicked.", "INFO");
+
+            if (!publicUrl) {
+                addLog("Validation failed: Missing Public URL.", "WARN");
+                return showError("Please enter your Public URL (Cloudflare/Ngrok).");
+            }
+            if (contactsData.length === 0) {
+                addLog("Validation failed: Missing Contacts data.", "WARN");
+                return showError("Please upload your Contacts Excel sheet.");
+            }
+            if (scriptData.length === 0) {
+                addLog("Validation failed: Missing Script data.", "WARN");
+                return showError("Please upload your Questions Script Excel sheet.");
+            }
+            
+            addLog(`Validation passed. Starting campaign with ${contactsData.length} contacts.`, "SUCCESS");
+            
+            formArea.classList.add('hidden');
+            callArea.classList.remove('hidden'); callArea.classList.add('flex');
+            
+            currentContactIndex = 0;
+            executeNextContact();
+        });
+
+        nextContactBtn.addEventListener('click', () => {
+            addLog("Manually moving to next contact.", "INFO");
+            currentContactIndex++;
+            executeNextContact();
+        });
+
+        function triggerNextContactAuto() {
+            const delaySeconds = parseInt(callDelayInput.value) || 0;
+            addLog("Action 'end' triggered. Ending call flow.", "SUCCESS");
+
+            if (delaySeconds > 0) {
+                callStatusText.innerText = `Waiting ${delaySeconds}s before next call...`;
+                addLog(`Waiting ${delaySeconds} seconds before dialing next contact.`, "INFO");
+                setTimeout(() => {
+                    currentContactIndex++;
+                    executeNextContact();
+                }, delaySeconds * 1000);
+            } else {
+                callStatusText.innerText = "Ending call... dialing next contact.";
+                currentContactIndex++;
+                executeNextContact();
+            }
+        }
+
+        function executeNextContact() {
+            // End any existing call
+            if (pollingInterval) clearInterval(pollingInterval);
+            currentCallSid = null;
+            lastPolledState = null;
+            
+            if (currentContactIndex >= contactsData.length) {
+                addLog("Campaign Finished! No more contacts.", "SUCCESS");
+                targetDisplay.innerText = "Campaign Finished!";
+                contactTypeDisplay.innerText = "All contacts have been called.";
+                callStatusText.innerText = "";
+                callRing.className = "absolute inset-0 rounded-full border-4 border-slate-500 opacity-50";
+                excelScriptArea.classList.add('hidden');
+                nextContactBtn.classList.add('hidden');
+                return;
+            }
+
+            const contact = contactsData[currentContactIndex];
+            addLog(`Preparing to call Contact ${currentContactIndex + 1}: ${contact.phone} (Type: ${contact.type})`, "INFO");
+
+            campaignProgress.innerText = `Contact ${currentContactIndex + 1} of ${contactsData.length}`;
+            targetDisplay.innerText = contact.phone;
+            contactTypeDisplay.innerText = `Script Type: ${contact.type || 'None'}`;
+            
+            filteredScriptData = scriptData.filter(s => s.type === contact.type);
+            currentStepIndex = 0;
+
+            nextContactBtn.classList.add('hidden');
+            excelScriptArea.classList.remove('hidden');
+
+            if (filteredScriptData.length === 0) {
+                addLog(`No questions matched type: '${contact.type}'. Skipping...`, "WARN");
+                callStatusText.innerHTML = `<span class='text-red-400'>Warning: No questions found matching type '${contact.type}'.</span><br/>Skipping contact...`;
+                callRing.classList.replace('border-indigo-500', 'border-red-500');
+                
+                const delaySeconds = parseInt(callDelayInput.value) || 2;
+                setTimeout(() => {
+                    currentContactIndex++;
+                    executeNextContact();
+                }, delaySeconds * 1000);
+                return;
+            }
+
+            addLog(`${filteredScriptData.length} questions loaded for type: '${contact.type}'.`, "INFO");
+
+            callStatusText.innerText = "Calling via Twilio...";
+            callRing.className = "absolute inset-0 rounded-full border-4 border-indigo-500 opacity-50 pulse-ring";
+            liveSpeechInput.value = ''; speakBtn.disabled = true;
+
+            loadExcelStep();
+            makeTwilioCall(contact.phone);
+        }
+
+        async function makeTwilioCall(number) {
+            try {
+                const publicUrl = publicUrlInput.value.trim();
+                const endpoint = 'http://127.0.0.1:5001/api/call';
+                
+                addLog(`Executing POST request to ${endpoint}...`, "INFO");
+                addLog(`Payload: {"number": "${number}", "public_url": "${publicUrl}"}`, "INFO");
+
+                const response = await fetch(endpoint, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number: number, public_url: publicUrl })
+                });
+                
+                addLog(`Fetch response received. HTTP Status: ${response.status}`, "INFO");
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentCallSid = data.call_sid;
+                    addLog(`Call API Success. Twilio Call SID: ${currentCallSid}`, "SUCCESS");
+
+                    speakBtn.disabled = false;
+                    callStatusText.innerHTML = "Ringing!<br/><span class='text-yellow-400'>Answer & PRESS 9.</span><br/>Waiting for keypress...";
+                    callRing.classList.replace('border-indigo-500', 'border-yellow-500');
+                    
+                    addLog("Starting keypress polling loop...", "INFO");
+                    startKeypressPolling();
+                } else {
+                    addLog(`Call API Rejected: ${data.error || "Unknown error"}`, "ERROR");
+                    callStatusText.innerText = "API Error: " + (data.error || "Unknown error");
+                    callRing.classList.replace('border-indigo-500', 'border-red-500');
+                }
+            } catch (error) {
+                addLog(`Network/Fetch Error connecting to Python backend: ${error.message}`, "ERROR");
+                callStatusText.innerText = "Connection Error. Is Python server running on http://127.0.0.1:5001 ?";
+                callRing.classList.replace('border-indigo-500', 'border-red-500');
+            }
+        }
+
+        function loadExcelStep() {
+            if (currentStepIndex >= filteredScriptData.length) {
+                addLog("Script flow completely finished for this contact.", "SUCCESS");
+                currentQuestionText.innerText = "✅ Script Complete for this contact!";
+                speakQuestionBtn.classList.add('hidden');
+                document.getElementById('answerButtonsRow').classList.add('hidden');
+                scriptProgress.innerText = "Done";
+                transcriptBox.classList.add('hidden');
+                callRing.className = "absolute inset-0 rounded-full border-4 border-slate-500 opacity-50";
+                callStatusText.innerText = "Call flow finished.";
+                
+                nextContactBtn.classList.remove('hidden');
+                return;
+            }
+            
+            speakQuestionBtn.classList.remove('hidden');
+            document.getElementById('answerButtonsRow').classList.remove('hidden');
+            transcriptBox.classList.add('hidden');
+            
+            answerYesBtn.classList.remove('ring-4', 'ring-green-400', 'opacity-50');
+            answerNoBtn.classList.remove('ring-4', 'ring-red-400', 'opacity-50');
+            answerYesBtn.classList.add('opacity-100'); answerNoBtn.classList.add('opacity-100');
+            
+            const step = filteredScriptData[currentStepIndex];
+            stepCounter.innerText = currentStepIndex + 1;
+            scriptProgress.innerText = `${currentStepIndex + 1} / ${filteredScriptData.length}`;
+            currentQuestionText.innerText = step.question;
+            yesPreview.innerText = "Says: " + (step.yes || "...");
+            noPreview.innerText = "Says: " + (step.no || "...");
+            
+            addLog(`Loaded UI Step ${currentStepIndex + 1}: "${step.question}" (Action: ${step.action})`, "INFO");
+        }
+
+        speakQuestionBtn.addEventListener('click', () => {
+            addLog("User manually clicked 'Ask & Auto-Listen'", "INFO");
+            executeAskAndListen();
+        });
+
+        async function executeAskAndListen() {
+            if (!currentCallSid) {
+                addLog("executeAskAndListen called but no active Call SID. Aborting.", "WARN");
+                return; 
+            }
+
+            const publicUrl = publicUrlInput.value.trim();
+            const step = filteredScriptData[currentStepIndex];
+            callStatusText.innerText = "Asking question...";
+            
+            speakQuestionBtn.disabled = true;
+            speakQuestionBtn.classList.replace('bg-blue-600', 'bg-amber-600');
+            speakQuestionBtn.classList.replace('hover:bg-blue-500', 'hover:bg-amber-500');
+            speakQuestionBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> <span>Listening to customer...</span>';
+            lucide.createIcons();
+
+            try {
+                addLog(`Executing /api/ask_and_listen POST. Question: "${step.question}"`, "INFO");
+                
+                const response = await fetch('http://127.0.0.1:5001/api/ask_and_listen', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        call_sid: currentCallSid, question: step.question,
+                        yes_response: step.yes, no_response: step.no, public_url: publicUrl
+                    })
+                });
+                
+                if (response.ok) {
+                    addLog("Successfully requested question playback. Starting polling state...", "SUCCESS");
+                    callStatusText.innerText = "Asking question...";
+                    startPollingState();
+                } else {
+                    addLog(`Failed to start listening. HTTP Status: ${response.status}`, "ERROR");
+                    callStatusText.innerText = "Failed to start listening.";
+                    resetSpeakBtn();
+                }
+            } catch (e) {
+                addLog(`Fetch Error on ask_and_listen: ${e.message}`, "ERROR");
+                callStatusText.innerText = "Error connecting to local server.";
+                resetSpeakBtn();
+            }
+        }
+
+        function resetSpeakBtn() {
+            speakQuestionBtn.disabled = false;
+            speakQuestionBtn.classList.replace('bg-amber-600', 'bg-blue-600');
+            speakQuestionBtn.classList.replace('hover:bg-amber-500', 'hover:bg-blue-500');
+            speakQuestionBtn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i> <span>Ask & Auto-Listen</span>';
+            lucide.createIcons();
+        }
+
+        function startKeypressPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            lastPolledState = null;
+            addLog("Commenced pinging server for keypress '9' detection...", "INFO");
+            
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`http://127.0.0.1:5001/api/call_state/${currentCallSid}`);
+                    const data = await res.json();
+                    
+                    if (data.status !== lastPolledState) {
+                        addLog(`Poller state changed to: ${data.status}`, "INFO");
+                        lastPolledState = data.status;
+                    }
+
+                    if (data.status === 'keypress_detected') {
+                        addLog("Keypress 9 detected by Twilio!", "SUCCESS");
+                        clearInterval(pollingInterval);
+                        callRing.classList.replace('border-yellow-500', 'border-green-500');
+                        callStatusText.innerText = "Key 9 Pressed! Starting Script...";
+                        setTimeout(() => executeAskAndListen(), 500);
+                    }
+                } catch (e) {
+                    // Mute errors on poll to prevent log flooding, maybe log once if needed
+                } 
+            }, 1000); 
+        }
+
+        function startPollingState() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            lastPolledState = null;
+            addLog("Commenced pinging server for speech detection...", "INFO");
+
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`http://127.0.0.1:5001/api/call_state/${currentCallSid}`);
+                    const data = await res.json();
+                    
+                    if (data.status !== lastPolledState) {
+                        addLog(`Poller state changed to: ${data.status}`, "INFO");
+                        lastPolledState = data.status;
+                    }
+
+                    if (data.status === 'answered') {
+                        addLog(`Speech detected! Transcript: "${data.last_speech}"`, "SUCCESS");
+                        clearInterval(pollingInterval);
+                        handleAutoAnswered(data);
+                    }
+                } catch (e) {} 
+            }, 1500);
+        }
+
+        function handleAutoAnswered(data) {
+            callStatusText.innerText = "Response Detected!";
+            transcriptBox.classList.remove('hidden');
+            heardText.innerText = `"${data.last_speech}"`;
+            
+            addLog(`Analyzing intent for: "${data.last_speech}" -> Output: ${data.detected_intent}`, "INFO");
+
+            if (data.detected_intent === 'yes') {
+                answerYesBtn.classList.add('ring-4', 'ring-green-400');
+                answerNoBtn.classList.add('opacity-50');
+            } else if (data.detected_intent === 'no') {
+                answerNoBtn.classList.add('ring-4', 'ring-red-400');
+                answerYesBtn.classList.add('opacity-50');
+            } else {
+                heardText.innerText = `"${data.last_speech}" (Unsure if Yes/No)`;
+            }
+
+            resetSpeakBtn();
+            
+            // Check the action of the current question step
+            const currentAction = filteredScriptData[currentStepIndex].action;
+            
+            addLog(`Pausing 4.5 seconds for Twilio to speak the answer... Action defined as: '${currentAction}'`, "INFO");
+            
+            setTimeout(() => {
+                if (currentAction === 'end') {
+                    triggerNextContactAuto();
+                } else {
+                    // Standard flow -> Move to next question
+                    currentStepIndex++;
+                    loadExcelStep();
+                    
+                    // AUTO-TRIGGER NEXT QUESTION IF AVAILABLE
+                    if (currentStepIndex < filteredScriptData.length && currentCallSid) {
+                        addLog("Auto-triggering the next question.", "INFO");
+                        setTimeout(() => executeAskAndListen(), 500);
+                    }
+                }
+            }, 4500);
+        }
+
+        // --- MANUAL OVERRIDES ---
+        answerYesBtn.addEventListener('click', async () => {
+            addLog("User clicked YES manual override.", "WARN");
+            if (pollingInterval) clearInterval(pollingInterval);
+            resetSpeakBtn();
+            
+            const step = filteredScriptData[currentStepIndex];
+            if (step.yes) await sendManualSpeech(step.yes);
+            
+            setTimeout(() => {
+                if (step.action === 'end') {
+                    triggerNextContactAuto();
+                } else {
+                    currentStepIndex++; 
+                    loadExcelStep();
+                }
+            }, 4500);
+        });
+
+        answerNoBtn.addEventListener('click', async () => {
+            addLog("User clicked NO manual override.", "WARN");
+            if (pollingInterval) clearInterval(pollingInterval);
+            resetSpeakBtn();
+            
+            const step = filteredScriptData[currentStepIndex];
+            if (step.no) await sendManualSpeech(step.no);
+            
+            setTimeout(() => {
+                if (step.action === 'end') {
+                    triggerNextContactAuto();
+                } else {
+                    currentStepIndex++; 
+                    loadExcelStep();
+                }
+            }, 4500);
+        });
+
+        async function sendManualSpeech(text) {
+            if (!text || !currentCallSid) return;
+            liveSpeechInput.value = '';
+            callStatusText.innerText = "Sending manual text...";
+            addLog(`Executing /api/speak POST. Custom text: "${text}"`, "INFO");
+
+            try {
+                await fetch('http://127.0.0.1:5001/api/speak', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ call_sid: currentCallSid, text })
+                });
+                callStatusText.innerText = "Agent Speaking!";
+                addLog("Manual speech sent successfully.", "SUCCESS");
+            } catch (e) {
+                addLog(`Fetch Error on manual speech: ${e.message}`, "ERROR");
+            }
+        }
+
+        // End the entire campaign entirely and go back to form
+        endCallBtn.addEventListener('click', () => {
+            addLog("User aborted the campaign manually.", "WARN");
+            if (pollingInterval) clearInterval(pollingInterval);
+            clearTimeout(callTimeout);
+            currentCallSid = null;
+            callStatusText.innerText = "Campaign Aborted...";
+            callRing.className = "absolute inset-0 rounded-full border-4 border-slate-500 opacity-50";
+            setTimeout(() => {
+                callArea.classList.add('hidden'); callArea.classList.remove('flex');
+                formArea.classList.remove('hidden');
+                nextContactBtn.classList.add('hidden');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
