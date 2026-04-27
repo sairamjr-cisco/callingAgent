@@ -1,0 +1,29 @@
+[
+  {
+    "id": "q1",
+    "type": "creditcard",
+    "question": "Are you interested in our premium credit card?",
+    "yes": "Awesome, I just have one quick follow-up question.",
+    "no": "No problem, have a good day.",
+    "action_yes": "q2_income",
+    "action_no": "end"
+  },
+  {
+    "id": "q2_income",
+    "type": "creditcard",
+    "question": "What is your annual income?",
+    "yes": "Great, thank you for sharing that information.",
+    "no": "No problem, we will note that.",
+    "action_yes": "q3_existing",
+    "action_no": "q3_existing"
+  },
+  {
+    "id": "q3_existing",
+    "type": "creditcard",
+    "question": "Do you have any existing credit cards?",
+    "yes": "Thank you for sharing that information. We will review your application and get back to you shortly.",
+    "no": "No problem, have a good day.",
+    "action_yes": "end",
+    "action_no": "end"
+  }
+]
