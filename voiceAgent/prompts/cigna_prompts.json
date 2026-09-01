@@ -1,0 +1,73 @@
+{
+  "profile": "cigna",
+  "rules": [
+    {
+      "id": "npi_or_tax_id_entry",
+      "type": "dtmf",
+      "prompt_contains": ["npi or tax id", "say or enter your npi", "enter your npi", "please say or enter your 10 digit npi"],
+      "field": "npi"
+    },
+    {
+      "id": "cigna_main_menu_choice",
+      "type": "dtmf",
+      "prompt_contains": ["claims or press 1", "claims or press one", "claims", "main menu"],
+      "field": "aetna_main_menu_choice"
+    },
+    {
+      "id": "patient_cigna_id_entry",
+      "type": "dtmf",
+      "prompt_contains": ["patient's cigna id", "member id", "patient id", "cigna id"],
+      "requires_any": ["enter", "say"],
+      "field": "member_id"
+    },
+    {
+      "id": "member_id_confirm_yes",
+      "type": "dtmf",
+      "prompt_contains": ["you entered id", "correct", "is this correct"],
+      "requires_any": ["press one", "press 1", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "member_dob_entry",
+      "type": "dtmf",
+      "prompt_contains": ["date of birth", "dob"],
+      "requires_any": ["enter", "say"],
+      "field": "member_dob"
+    },
+    {
+      "id": "member_dob_confirm_yes",
+      "type": "dtmf",
+      "prompt_contains": ["correct patient", "is the correct patient", "patient name is"],
+      "requires_any": ["press one", "press 1", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "date_of_service_entry",
+      "type": "dtmf",
+      "prompt_contains": ["date of service", "dos", "service date"],
+      "requires_any": ["enter", "say"],
+      "field": "date_of_service"
+    },
+    {
+      "id": "cigna_fax_doc_request",
+      "type": "dtmf",
+      "prompt_contains": ["information via fax", "have a faxed", "have it faxed"],
+      "requires_any": ["press two", "press 2"],
+      "value": "2"
+    },
+    {
+      "id": "try_another_patient",
+      "type": "dtmf",
+      "prompt_contains": ["try another patient", "what would you like next"],
+      "requires_any": ["press one", "press 1", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "cigna_skip_ssn_confirmation",
+      "type": "dtmf",
+      "prompt_contains": ["subscriber social security number", "use the subscriber ssn"],
+      "requires_any": ["press two", "press 2", "say no"],
+      "value": "2"
+    }
+  ]
+}

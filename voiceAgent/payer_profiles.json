@@ -1,0 +1,34 @@
+{
+  "profiles": [
+    {
+      "profile_name": "aetna_representative",
+      "display_name": "Aetna",
+      "phone_number": "18006240756"
+    },
+    {
+      "profile_name": "Test_representative1",
+      "display_name": "Rep1",
+      "phone_number": "18006240756"
+    },
+    {
+      "profile_name": "united_health_care",
+      "display_name": "United Health Care",
+      "phone_number": "18778423210"
+    },
+    {
+      "profile_name": "Cigna",
+      "display_name": "Cigna",
+      "phone_number": "18664283935"
+    },
+    {
+      "profile_name": "BCBS-marry land",
+      "display_name": "BCBS-marry land",
+      "phone_number": "18008425975"
+    },
+    {
+      "profile_name": "Humana",
+      "display_name": "Humana",
+      "phone_number": "18005230023"
+    }
+  ]
+}

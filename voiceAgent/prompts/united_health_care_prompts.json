@@ -1,0 +1,79 @@
+{
+  "profile": "united_health_care",
+  "rules": [
+    {
+      "id": "uhc_welcome_claims",
+      "type": "speak",
+      "prompt_contains": ["what are you calling about", "reason for your call", "in a few words, tell me"],
+      "template": "I'm a member"
+    },
+    {
+      "id": "uhc_healthcare_professional",
+      "type": "speak",
+      "prompt_contains": ["calling as a health care professional", "calling as a provider"],
+      "template": "Yes"
+    },
+    {
+      "id": "uhc_medical_claim_type",
+      "type": "speak",
+      "prompt_contains": ["what type of claim", "say medical, mental health"],
+      "template": "Medical"
+    },
+    {
+      "id": "uhc_npi_entry",
+      "type": "dtmf",
+      "prompt_contains": ["what is your npi", "what's the npi", "enter your 10 digit npi", "provider's npi"],
+      "field": "npi"
+    },
+    {
+      "id": "patient_uhc_id_entry",
+      "type": "dtmf",
+      "prompt_contains": ["what is the member id", "what is the member i d", "what's the member id", "what's the member i d", "and what is the member id", "what is your member id"],
+      "field": "member_id"
+    },
+    {
+      "id": "uhc_id_confirm_yes",
+      "type": "dtmf",
+      "prompt_contains": ["you entered id", "correct", "is this correct", "is that correct"],
+      "requires_any": ["press one", "press 1", "say yes", "is that correct"],
+      "value": "1"
+    },
+    {
+      "id": "uhc_member_dob_entry",
+      "type": "dtmf",
+      "prompt_contains": ["what is the member s date of birth", "what is the member s dob", "what is the patient s date of birth", "what is the patient s dob", "member s date of birth", "member s dob", "patient s date of birth", "patient s dob"],
+      "field": "member_dob"
+    },
+    {
+      "id": "uhc_dob_confirm_yes",
+      "type": "dtmf",
+      "prompt_contains": ["correct patient", "is the correct patient", "patient name is"],
+      "requires_any": ["press one", "press 1", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "uhc_date_of_service_entry",
+      "type": "dtmf",
+      "prompt_contains": ["date of service", "dos", "service date", "date of service"],
+      "field": "date_of_service"
+    },
+    {
+      "id": "uhc_skip_more_details",
+      "type": "speak",
+      "prompt_contains": ["like to hear more details", "hear that again", "look up another claim"],
+      "template": "No"
+    },
+    {
+      "id": "uhc_connect_to_advocate",
+      "type": "speak",
+      "prompt_contains": ["main menu or connect to an advocate"],
+      "template": "Connect to an advocate"
+    },
+    {
+      "id": "uhc_accept_survey",
+      "type": "speak",
+      "prompt_contains": ["willing to take a brief survey"],
+      "template": "Yes"
+    }
+  ]
+}

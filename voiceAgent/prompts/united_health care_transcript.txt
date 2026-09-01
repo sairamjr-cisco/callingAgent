@@ -1,0 +1,70 @@
+[2026-04-14 19:32:33.761] Representative: UnitedHealthcare. We are currently experiencing higher call volumes, and wait times may be longer than expected. Your call may be monitored or recorded for quality. UnitedHealthcare provider portal users can now receive real time assistance through our on demand chat when signing in at uhcprovider.com. Our chat advocates are there to support with claims, benefits, authorizations, and more. Look for the chat button and start chatting today. For English, just remain on the line. Hello. I'm Avery, your virtual assistant at UnitedHealthcare. If you're a member and need help with your health plan, say I'm a member. Otherwise, in a few words, tell me what are you calling about.
+[2026-04-14 19:33:25.591] Superdial Agent: Claims.
+[2026-04-14 19:33:32.031] Representative: Are you calling as a health care professional?
+[2026-04-14 19:33:35.526] Superdial Agent: Yes.
+[2026-04-14 19:33:42.366] Representative: Sure. What type of claim are you calling about? You can say medical, mental health, prescription, or dental.
+[2026-04-14 19:33:50.181] Superdial Agent: Medical.
+[2026-04-14 19:33:56.761] Representative: Thanks. Let's move forward with your medical claim request. And what is the member ID?
+[2026-04-14 19:34:09.360] Superdial Agent: DTMF 1 DTMF 1 DTMF 2 DTMF 7 DTMF 1 DTMF 2 DTMF 4 DTMF 8 DTMF 9
+[2026-04-14 19:34:11.926] Representative: I heard 984217211. Is that correct?
+[2026-04-14 19:34:20.845] Superdial Agent: DTMF 1
+[2026-04-14 19:34:22.881] Representative: What is the member's date of birth, including the four digit year, for example, 06/19/1967?
+[2026-04-14 19:34:34.917] Superdial Agent: DTMF 9 DTMF 1 DTMF 7 DTMF 0 DTMF 9 DTMF 0
+[2026-04-14 19:34:34.956] Representative: Thank you. One moment while I pull up the account. Alright. I have the account in front of me now. One moment. I'm pulling that up now. What's the date of service?
+[2026-04-14 19:34:50.063] Superdial Agent: DTMF 6 DTMF 2 DTMF 0 DTMF 2 DTMF 7 DTMF 1 DTMF 3 DTMF 0 DTMF 7 DTMF 5
+[2026-04-14 19:34:56.280] Representative: Okay. What is your NPI?
+[2026-04-14 19:35:05.056] Superdial Agent: DTMF 0 DTMF 0 DTMF 7 DTMF 9 DTMF 5 DTMF 5 DTMF 2 DTMF 1
+[2026-04-14 19:35:05.156] Representative: Thanks. I've got it.
+[2026-04-14 19:35:05.537] Superdial Agent: DTMF 4 DTMF 3
+[2026-04-14 19:35:11.091] Representative: I found one claim for this member. Here are the details. Your claim has been finalized and processed. It was received on 03/18/2026 and processed on 04/08/2026. The claim number is 74916388. The billed amount was $297. The total adjustments came to $218.35. The total patient responsibility is $0. The plan paid is $78 and $6.05 cents total. Would you like to hear more details?
+[2026-04-14 19:35:48.571] Superdial Agent: No.
+[2026-04-14 19:35:50.586] Representative: Would you like to hear that again?
+[2026-04-14 19:35:53.851] Superdial Agent: No.
+[2026-04-14 19:35:55.625] Representative: Would you like to look up another claim for this member?
+[2026-04-14 19:36:01.226] Superdial Agent: No.
+[2026-04-14 19:36:03.241] Representative: For line item details, remittance advice documents, or to see next steps, sign in to uhcprovider.com, then search for your claim using our claims tool. If that's all you need, you can hang up now. Otherwise, you can say main menu or connect to an advocate.
+[2026-04-14 19:36:20.361] Superdial Agent: Connect to an advocate.
+[2026-04-14 19:36:23.886] Representative: I'm now transferring you to an advocate. Would you be willing to take a brief survey at the end of this call?
+[2026-04-14 19:36:33.776] Superdial Agent: Yes.
+[2026-04-14 19:36:36.631] Representative: Thank you. Now just so you know, when you've finished speaking with the advocate, you'll need to stay on the line to take the survey. I'm transferring you now. Service advocate. Can I have your first name and last name initial, please?
+[2026-04-14 19:36:59.036] Superdial Agent: Yeah. Definitely. Hi. Good morning. My name is Kent. That's k e n t. Initial to my last name, that would be n as in November. Calling from provider's office to check for a status of a claim for this number that we have on file. Could you be able to assist me? And, also, by the way, can I have your name again? I'm so sorry. I did not quite catch that. Your line is cutting in and out earlier.
+[2026-04-14 19:37:20.536] Representative: No problem. My first name, k y l I, last name initial, a for alpha.
+[2026-04-14 19:37:26.866] Superdial Agent: Mhmm. Got it. Thank you so much, Kyle.
+[2026-04-14 19:37:30.941] Representative: Okay. No problem. And, yes, can I have the provider's name and the member's name?
+[2026-04-14 19:37:36.751] Superdial Agent: Sure. The member's name, that would be for Mary Willie. And the provider's name, that would be Affinity Family Practice.
+[2026-04-14 19:37:45.836] Representative: Alright. Thank you. And can I have the date of service and total charge amount of the claim?
+[2026-04-14 19:37:56.641] Superdial Agent: Sure. The date of service, that was back on 03/17/2026 together with the claim charge amount of $297 even.
+[2026-04-14 19:38:07.451] Representative: Got it. Thank you. Do you have a specific question for the claim?
+[2026-04-14 19:38:11.786] Superdial Agent: Yeah. Actually, I do have. I wanted to know what would be the general status of this one if it's already been paid or it's gotten a note.
+[2026-04-14 19:38:18.446] Representative: Okay. Alright. Sure. I can definitely help you check for that information. And right now, I'm waiting for the system to load while waiting, by the way, this month to inform you that you can also use our UnitedHealthcare portal to check eligibility, benefits, claims, and authorization information.
+[2026-04-14 19:38:36.796] Superdial Agent: Mhmm.
+[2026-04-14 19:38:36.841] Representative: And, yes, claim number, that is 74916388,
+[2026-04-14 19:38:44.956] Superdial Agent: Mhmm.
+[2026-04-14 19:38:44.976] Representative: and this was received 03/18/2026, and this was processed 04/08/2026. Claim was paid Paid amount, $78.65 and allowed amount, $80.25. Now there is a sequestration rate of $1.60,
+[2026-04-14 19:39:10.525] Superdial Agent: Mhmm.
+[2026-04-14 19:39:12.676] Representative: and issued via
+[2026-04-14 19:39:12.686] Superdial Agent: Mhmm.
+[2026-04-14 19:39:14.756] Representative: as EFT EFT number or payment number 806VForVictor1839744. This payment will be issued on April 1620
+[2026-04-14 19:39:30.516] Superdial Agent: Mhmm.
+[2026-04-14 19:39:30.601] Representative: 26 and can be redeemed on the same date. And total payment, $78.65,
+[2026-04-14 19:39:32.516] Superdial Agent: Mhmm.
+[2026-04-14 19:39:37.800] Representative: single
+[2026-04-14 19:39:38.756] Superdial Agent: Got it. Thank you. Issued on EFT on April 16, and it is a single payment. And what would be the total single payment amount? That would be 78 and $65. Is that correct?
+[2026-04-14 19:39:52.911] Representative: That's correct. Yes.
+[2026-04-14 19:39:54.301] Superdial Agent: Got it. Let me just put that one in here. 65. And has this one been cleared already?
+[2026-04-14 19:40:01.711] Representative: No. Because, issue date will be on '16. Today is fourteen.
+[2026-04-14 19:40:05.156] Superdial Agent: Oh, okay. Got it. Thank you. Let me just put that one in here. Let me just put that one in here. Please bear with me. And the payment date, that was back on April oh, that will be on 04/16/2026. Right? The payment date for this one?
+[2026-04-14 19:40:34.221] Representative: Yes. Yes.
+[2026-04-14 19:40:35.316] Superdial Agent: Great. Thank you. And just to confirm, in regards with the claim that we're checking today before we end our call today, Kelly, the claim was received back on 03/18/2026, and the payment was made on April 16 I mean, the payment will be made on 04/16/2026, and the paid amount, that would be $78.65. And just to confirm, the payment was made to the provider. Right?
+[2026-04-14 19:41:02.811] Representative: That's right.
+[2026-04-14 19:41:04.266] Superdial Agent: Got it. And the check or the payment was issued electronically via the EFT number of 806VAsInVictor18397444. Is that correct as well? Great.
+[2026-04-14 19:41:19.231] Representative: Yes.
+[2026-04-14 19:41:21.276] Superdial Agent: And just to confirm also the claim number, that would be 74916388. And it is a single payment, not cleared yet as it will be issued on '16. And the sequencer oh,
+[2026-04-14 19:41:33.236] Representative: '16.
+[2026-04-14 19:41:35.191] Superdial Agent: yeah. '16. And the sequenceration rate, that would be 100 I mean, $1.60. Is that correct? And the allowed amount is $80 and 20 5. Okay. Great. Thank you. And upon double checking in here, I think that would be the only information I will be needing for you as of this moment, Kelly. And all I'll be needing now is our co reference number together with the initial of your last name. That's okay?
+[2026-04-14 19:41:41.635] Representative: Yes. That's right. Yeah. No problem. Last name initial, a for Elsa, and call reference number, that would be 1666370
+[2026-04-14 19:42:08.691] Superdial Agent: Mhmm.
+[2026-04-14 19:42:09.195] Representative: 75.
+[2026-04-14 19:42:11.251] Superdial Agent: Great. Thank you so much, Kelly. And, yeah, I think that would be all. Have a great day, and enjoy the rest of your week. Goodbye for now. Happy Tuesday.
+[2026-04-14 19:42:16.481] Representative: Alright. Thank you. Goodbye for now. Take care. Yeah. Thank you, and goodbye for now.
+[2026-04-14 19:42:22.866] Superdial Agent: Yeah. Yeah. Bye bye.

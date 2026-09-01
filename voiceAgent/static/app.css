@@ -1,0 +1,52 @@
+body { font-family: 'Oswald', sans-serif; background: #f5f7fa; color: #121c27; }
+.pulse-ring { animation: pulse 2s infinite; }
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.ai-pulse { animation: aiGlow 2s infinite alternate; }
+@keyframes aiGlow {
+    from { box-shadow: 0 0 5px #1467b3, inset 0 0 5px #1467b3; }
+    to { box-shadow: 0 0 20px #5fa9ea, inset 0 0 10px #5fa9ea; }
+}
+
+.font-open-sans {
+    font-family: 'Open Sans', sans-serif;
+}
+
+.bg-brand-main {
+    background-color: #063e70;
+}
+
+.bg-brand-accent {
+    background-color: #1467b3;
+}
+
+.header-pattern {
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDBMOCA4Wk04IDBMMCA4WiIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD4KPC9zdmc+");
+}
+
+.h-80vh {
+    height: 80vh;
+}
+
+.text-11px {
+    font-size: 11px;
+}
+
+.text-10px {
+    font-size: 10px;
+}
+
+.min-h-400px {
+    min-height: 400px;
+}
+
+.line-clamp-2-custom {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

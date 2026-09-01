@@ -1,0 +1,371 @@
+{
+  "profile": "aetna_representative",
+  "rules": [
+    {
+      "id": "npi_or_tax_id_entry",
+      "type": "dtmf",
+      "prompt_contains": ["npi or tax id", "say or enter your npi"],
+      "field": "npi"
+    },
+    {
+      "id": "main_menu_claims",
+      "type": "dtmf",
+      "prompt_contains": ["claims or press one", "say claims or press one", "claims or press 1", "say claims or press 1"],
+      "field": "aetna_main_menu_choice"
+    },
+    {
+      "id": "coverage_for_whom_different_patient",
+      "type": "dtmf",
+      "prompt_contains": ["different patient or press 2", "different patient or press two"],
+      "requires_any": ["press two", "press 2"],
+      "value": "2"
+    },
+    {
+      "id": "same_provider_yes",
+      "type": "dtmf",
+      "prompt_contains": ["same provider"],
+      "requires_any": ["press one"],
+      "value": "1"
+    },
+    {
+      "id": "try_member_id_again_no",
+      "type": "dtmf",
+      "prompt_contains": ["member id again", "member i d again", "patient id again"],
+      "requires_any": ["press two", "press 2", "no two", "no 2"],
+      "value": "2"
+    },
+    {
+      "id": "patient_aetna_id_entry",
+      "type": "dtmf",
+      "prompt_contains": ["patient's aetna id", "member id", "patient id"],
+      "requires_any": ["enter", "say"],
+      "field": "member_id"
+    },
+    {
+      "id": "member_id_confirm_yes",
+      "type": "dtmf",
+      "prompt_contains": ["you entered id", "correct"],
+      "requires_any": ["press one", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "try_any_data_again_no",
+      "type": "dtmf",
+      "prompt_contains": ["try the * again"],
+      "requires_any": ["press two", "press 2", "no two", "no 2"],
+      "value": "2"
+    },
+    {
+      "id": "try_different_data_rollover",
+      "type": "campaign_rollover",
+      "prompt_contains": ["try a different *", "try another *"],
+      "requires_any": ["press one", "press 1", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "dob_entry",
+      "type": "dtmf",
+      "prompt_contains": ["date of birth", "dob"],
+      "requires_any": ["enter", "say"],
+      "field": "member_dob"
+    },
+    {
+      "id": "patient_name_confirm_yes",
+      "type": "dtmf",
+      "prompt_contains": ["the patient is", "correct"],
+      "requires_any": ["press one", "say yes"],
+      "value": "1"
+    },
+    {
+      "id": "try_dos_again_no",
+      "type": "dtmf",
+      "prompt_contains": ["date of service again", "dos again"],
+      "requires_any": ["press two", "press 2", "no two", "no 2"],
+      "value": "2"
+    },
+    {
+      "id": "date_of_service_entry",
+      "type": "dtmf",
+      "prompt_contains": ["date of service", "dos"],
+      "requires_any": ["enter", "say"],
+      "field": "date_of_service"
+    },
+    {
+      "id": "fax_or_press_two_skip",
+      "type": "dtmf",
+      "prompt_contains": ["have it faxed", "have a faxed", "via fax", "information via fax"],
+      "requires_any": ["press two", "press 2"],
+      "value": "2"
+    },
+    {
+      "id": "fax_it_or_press_one",
+      "type": "dtmf",
+      "prompt_contains": ["say fax it or press one", "say fax it or press 1", "fax including service level"],
+      "requires_any": ["press one", "press 1"],
+      "value": "1"
+    },
+    {
+      "id": "fax_number_entry",
+      "type": "dtmf",
+      "prompt_contains": ["say or enter the fax number", "starting with the area code"],
+      "field": "fax_number"
+    },
+    {
+      "id": "fax_number_confirm_again",
+      "type": "dtmf",
+      "prompt_contains": ["say or enter the fax number again", "ensure the fax is sent"],
+      "field": "fax_number"
+    },
+    {
+      "id": "check_another_claim_or_main_menu",
+      "type": "dtmf",
+      "prompt_contains": ["check another claim or press 2", "check another claim or press two"],
+      "requires_any": ["press two", "press 2"],
+      "value": "2"
+    },
+    {
+      "id": "aetna_check_another_claim_press_3",
+      "type": "dtmf",
+      "prompt_contains": ["check another claim"],
+      "requires_any": ["press three", "press 3"],
+      "value": "3"
+    },
+    {
+      "id": "aetna_check_another_claim_press_3",
+      "type": "dtmf",
+      "prompt_contains": ["check another claim"],
+      "requires_any": ["press one", "press 1"],
+      "value": "1"
+    },
+    {
+      "id": "aetna_try_another_patient_press_1",
+      "type": "dtmf",
+      "prompt_contains": ["try another patient"],
+      "requires_any": ["press one", "press 1"],
+      "value": "1"
+    },
+    {
+      "id": "something_else_help_no",
+      "type": "dtmf",
+      "prompt_contains": ["something else i can help you with", "any other patients", "anything else i can help"],
+      "requires_any": ["no", "press two"],
+      "value": "2"
+    },
+    {
+      "id": "repeat_eligibility_or_press_one",
+      "type": "dtmf",
+      "prompt_contains": ["eligibility again", "coverage information again"],
+      "requires_any": ["press one"],
+      "value": "1"
+    },
+    {
+      "id": "next_patient_or_press_three",
+      "type": "dtmf",
+      "prompt_contains": ["next patient", "different person"],
+      "requires_any": ["press three"],
+      "value": "3"
+    },
+    {
+      "id": "claims_address_or_press_four",
+      "type": "dtmf",
+      "prompt_contains": ["claims address", "payer id"],
+      "requires_any": ["press four"],
+      "value": "4"
+    },
+    {
+      "id": "return_main_menu_or_press_five",
+      "type": "dtmf",
+      "prompt_contains": ["return to the main menu"],
+      "requires_any": ["press five", "press 5"],
+      "value": "5"
+    },
+    {
+      "id": "speak_to_representative_press_zero",
+      "type": "dtmf",
+      "prompt_contains": ["speak with a representative", "press zero"],
+      "value": "0"
+    },
+    {
+      "id": "claims_form_provider_press_one",
+      "type": "dtmf",
+      "prompt_contains": ["submits claims", "cms", "hipaa"],
+      "requires_any": ["press one", "press 1"],
+      "value": "1"
+    },
+    {
+      "id": "human_rep_name",
+      "type": "speak",
+      "prompt_contains": ["may i have your name"],
+      "template": "My name is {caller_name}."
+    },
+    {
+      "id": "human_rep_spell_name",
+      "type": "spell",
+      "prompt_contains": ["spell it out", "please spell"],
+      "field": "caller_name"
+    },
+    {
+      "id": "human_rep_callback_number",
+      "type": "digits_speak",
+      "prompt_contains": ["callback number"],
+      "field": "callback_number"
+    },
+    {
+      "id": "human_rep_direct_line_confirm",
+      "type": "speak",
+      "prompt_contains": ["direct line"],
+      "template": "Yes, that is my direct line."
+    },
+    {
+      "id": "human_rep_provider_name",
+      "type": "speak_field",
+      "prompt_contains": ["provider's name", "provider name"],
+      "field": "provider_name"
+    },
+    {
+      "id": "human_rep_servicing_address",
+      "type": "speak_field",
+      "prompt_contains": ["servicing address", "service address"],
+      "field": "servicing_address"
+    },
+    {
+      "id": "human_rep_member_id_request",
+      "type": "digits_speak",
+      "prompt_contains": ["member id", "member i d", "patient id"],
+      "requires_any": ["help me with", "could you help", "please"],
+      "field": "member_id"
+    },
+    {
+      "id": "human_rep_member_name_request",
+      "type": "speak_field",
+      "prompt_contains": ["member's name", "patient name", "for the patient name"],
+      "field": "member_name"
+    },
+    {
+      "id": "human_rep_claim_inquiry_opening",
+      "type": "speak",
+      "prompt_contains": ["how may i help you", "help you with this number today"],
+      "template": "I am calling to check the status of a claim for member {member_name}, for date of service {date_of_service}. Could you confirm whether the claim was received and the current status?"
+    },
+    {
+      "id": "human_rep_repeat_dos",
+      "type": "speak_field",
+      "prompt_contains": ["date of service one more time", "date of service"],
+      "requires_any": ["one more time", "repeat"],
+      "field": "date_of_service"
+    },
+    {
+      "id": "human_rep_total_billed_amount",
+      "type": "speak_field",
+      "prompt_contains": ["total bill amount", "total billed amount"],
+      "field": "billed_amount"
+    },
+    {
+      "id": "human_rep_claim_number",
+      "type": "speak_field",
+      "prompt_contains": ["claim number"],
+      "requires_any": ["what\u2019s", "what's", "what is", "please share", "you\u2019re seeing", "you're seeing"],
+      "field": "claim_number"
+    },
+    {
+      "id": "human_rep_claim_number_last_four",
+      "type": "digits_speak",
+      "prompt_contains": ["claim number", "last four"],
+      "requires_any": ["what's", "what is", "please say", "please enter", "please share", "key in", "enter the", "say the", "spell", "digits of"],
+      "field": "claim_number_suffix"
+    },
+    {
+      "id": "human_rep_allowed_paid_amount",
+      "type": "speak",
+      "prompt_contains": ["allowed amount", "paid amount"],
+      "template": "Allowed amount is {allowed_amount}, and paid amount is {paid_amount}."
+    },
+    {
+      "id": "human_rep_patient_responsibility",
+      "type": "speak",
+      "prompt_contains": ["patient responsibility amount"],
+      "template": "Patient responsibility is {copay_amount}. Copay is {copay_amount}, and coinsurance is {coinsurance_amount}."
+    },
+    {
+      "id": "human_rep_denial_reason",
+      "type": "speak_field",
+      "prompt_contains": ["denial reason", "reason for", "portion that was denied"],
+      "field": "denial_reason"
+    },
+    {
+      "id": "human_rep_denial_date",
+      "type": "speak_field",
+      "prompt_contains": ["denial date"],
+      "field": "denial_date"
+    },
+    {
+      "id": "human_rep_appeal_deadline",
+      "type": "speak_field",
+      "prompt_contains": ["appeal filing deadline", "appeal deadline"],
+      "field": "appeal_deadline"
+    },
+    {
+      "id": "human_rep_appeal_address",
+      "type": "speak_field",
+      "prompt_contains": ["appeal submission address", "appeal address"],
+      "field": "appeal_address"
+    },
+    {
+      "id": "human_rep_paid_date",
+      "type": "speak_field",
+      "prompt_contains": ["paid date"],
+      "field": "paid_date"
+    },
+    {
+      "id": "human_rep_call_reference_number",
+      "type": "digits_speak",
+      "prompt_contains": ["call reference number", "reference number for today"],
+      "field": "call_reference_number"
+    },
+    {
+      "id": "human_rep_hold_ack",
+      "type": "speak",
+      "prompt_contains": ["place you on hold", "is it okay if i place you on hold"],
+      "template": "Yes, that is fine. Please place me on hold."
+    },
+    {
+      "id": "listen_one_moment",
+      "type": "listen",
+      "prompt_contains": ["one moment", "just a moment", "please hold", "thank you for your patience"]
+    },
+    {
+      "id": "human_rep_any_other_patients_no",
+      "type": "dtmf",
+      "prompt_contains": ["any other patients"],
+      "requires_any": ["press two", "press 2", "no 2", "no two"],
+      "value": "2"
+    },
+    {
+      "id": "say_medical_plan_press_1",
+      "type": "dtmf",
+      "prompt_contains": ["say medical plan"],
+      "requires_any": ["press one", "press 1"],
+      "value": "1"
+    }
+  ],
+  "templates": {
+    "greeting": "Hello, this is {provider_name}. I am calling about this member claim.",
+    "thanks_goodbye": "You are welcome. Thank you for your help today.",
+    "claim_approved": "Thank you for the update. The claim is approved. We appreciate your help. Have a good day.",
+    "claim_denied": "Thank you for the update. Could you please share the reason for the rejection?",
+    "claim_pending": "Thank you for the update. Could you please share the expected ETA for approval? We will follow up accordingly. Thank you, goodbye.",
+    "coverage_verified": "Thank you for the coverage and eligibility information. We appreciate your help. Have a good day.",
+    "next_member_switch": "Now, I would like to check another claim for a different patient.",
+    "fallback_misunderstood": "I want to make sure I answer correctly. Could you rephrase that once, or ask for member, claim, provider, or date details?",
+    "fallback_variants": [
+      "I'm sorry, I didn't catch that. Could you please repeat that once?",
+      "Sorry, the line was unclear. Could you please say that again?",
+      "Apologies, I missed part of that. Could you repeat it slowly?",
+      "I want to make sure I respond correctly. Could you repeat the question?",
+      "I'm sorry, I didn't fully understand. Can you please rephrase that?",
+      "Thanks, one moment please while I confirm that.",
+      "Could you please repeat the requested detail one more time?",
+      "Understood. I'm listening."
+    ]
+  }
+}
