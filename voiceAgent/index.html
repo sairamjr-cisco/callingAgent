@@ -60,34 +60,60 @@
         <div class="p-6 space-y-4" id="formArea">
             <div id="errorBox" class="hidden bg-red-50 border-l-4 border-red-500 p-3 rounded-r-md text-red-700 text-sm"></div>
 
-            <div class="text-center p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <i data-lucide="info" class="w-8 h-8 text-indigo-500 mx-auto"></i>
-                <h3 class="font-bold text-slate-800 text-sm">Automated Campaign Mode</h3>
-                <p class="text-xs text-slate-500 leading-relaxed font-open-sans">
-                    All twilio credentials, call settings, and files are picked up dynamically from the server property files.
-                </p>
-                <div class="text-xs font-semibold text-slate-600 bg-slate-100 rounded px-2 py-1.5 inline-block font-open-sans">
-                    📂 voiceAgent/input/
-                </div>
-                <p class="text-11px text-slate-400">
-                    Place your <b>contacts_sheet.xlsx</b> and <b>script.json</b> inside the input folder before launching.
-                </p>
+            <!-- Payer Dropdown -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">Payer</label>
+                <select id="payerProfileSelect" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="">Loading payers...</option>
+                </select>
+                <p id="payerProfileHint" class="text-xs text-slate-400 mt-1"></p>
             </div>
 
-            <button id="startCallBtn" class="w-full bg-brand-accent hover:bg-brand-main text-white font-semibold py-3.5 px-4 rounded-lg shadow-md transition-all flex items-center justify-center space-x-2 mt-4">
+            <!-- Upload & Download Template -->
+            <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs gap-3">
+                <div class="flex flex-col gap-1">
+                    <span class="font-bold text-slate-700">Need a template?</span>
+                    <a href="/api/download-template" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1">
+                        &#11015; Download Sample Excel
+                    </a>
+                </div>
+                <div class="border-l border-slate-200 h-10"></div>
+                <label class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-2 rounded-lg cursor-pointer transition-colors text-center flex items-center gap-1">
+                    &#128228; Upload Excel
+                    <input type="file" id="customerDataUpload" class="hidden" accept=".xlsx, .xls" />
+                </label>
+            </div>
+
+            <!-- Patient Count -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Patients Loaded</span>
+                    <span id="patientCountLabel" class="text-sm font-bold text-indigo-600">0 patients</span>
+                </div>
+                <div id="patientLoadingMsg" class="text-xs text-slate-400 mt-2 hidden">Loading patients...</div>
+                <div id="patientEmptyMsg" class="text-xs text-red-400 mt-2 hidden">No patient file found for this payer.</div>
+            </div>
+
+            <!-- Start button -->
+            <button id="startCallBtn" class="w-full bg-brand-accent hover:bg-brand-main text-white font-semibold py-3.5 px-4 rounded-lg shadow-md transition-all flex items-center justify-center space-x-2">
                 <i data-lucide="phone-outgoing" class="w-5 h-5"></i>
-                <span>Start Calling Campaign</span>
+                <span id="startBtnLabel">Start Calling Campaign</span>
             </button>
+
+            <a href="/results" class="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition-all text-sm font-semibold">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                <span>View Campaign Results</span>
+            </a>
         </div>
 
         <!-- Active Call Area (Hidden initially) -->
         <div id="callArea" class="hidden p-6 flex flex-col items-center space-y-4 bg-slate-900 text-white min-h-400px">
             <div id="campaignProgress" class="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-2">Contact 1 of X</div>
             <div id="targetDisplay" class="text-xl font-bold tracking-wider text-blue-400"></div>
-            <div id="contactTypeDisplay" class="text-sm text-blue-400 mb-1">Member ID: ...</div>
+            <div id="contactTypeDisplay" class="text-sm text-blue-400 mb-1">Claim ID: ...</div>
             <div id="callStatusText" class="text-blue-400 text-xs font-medium tracking-wide uppercase text-center leading-tight">Connecting...</div>
             <div class="text-sm text-blue-400 flex gap-2 justify-center mb-1">
-                <span>Fetch latest data: <span id="propConverterVal" class="font-semibold">-</span></span>
+                <span>JSON ready: <span id="propConverterVal" class="font-semibold">-</span></span>
                 <span class="text-blue-300">|</span>
                 <span>Payer Profile: <span id="propPayerVal" class="font-semibold">-</span></span>
             </div>
@@ -129,8 +155,8 @@
             </div>
 
             <div class="w-full mt-2 bg-slate-800 p-4 rounded-xl border border-slate-700 text-xs text-indigo-300 font-semibold uppercase tracking-wide space-y-2">
-                <div>Active member ID: <span id="activeMemberIdStatus" class="text-indigo-300">-</span></div>
-                <div>Remaining member IDs: <span id="remainingMemberIdsStatus" class="text-indigo-300">-</span></div>
+                <div>Active claim ID: <span id="activeMemberIdStatus" class="text-indigo-300">-</span></div>
+                <div>Remaining claim IDs: <span id="remainingMemberIdsStatus" class="text-indigo-300">-</span></div>
                 <div>Recording status is <span id="recordingStatus" class="text-indigo-300">off</span></div>
                 <div>Transcript status is <span id="transcriptionStatus" class="text-indigo-300">off</span></div>
                 <div>IVR Phase: <span id="ivrPhase" class="text-indigo-300">-</span></div>

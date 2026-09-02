@@ -2,10 +2,45 @@
   "profile": "united_health_care",
   "rules": [
     {
-      "id": "uhc_welcome_claims",
+      "id": "uhc_virtual_assistant_reason_claim_status",
       "type": "speak",
-      "prompt_contains": ["what are you calling about", "reason for your call", "in a few words, tell me"],
-      "template": "I'm a member"
+      "prompt_contains": ["virtual assistant", "in a few words", "what are you calling about"],
+      "requires_any": ["united healthcare", "member", "health plan"],
+      "template": "claim status"
+    },
+    {
+      "id": "uhc_transfer_advocate_reason_claims",
+      "type": "speak",
+      "prompt_contains": ["ensure i can assist you effectively", "before transferring you to an advocate", "provide us with the reason for your call"],
+      "requires_any": ["benefits", "claims", "prior authorization", "credentialing"],
+      "template": "Claims"
+    },
+    {
+      "id": "uhc_redirect_advocate_reason_claim_status",
+      "type": "speak",
+      "prompt_contains": ["redirect you to the right advocate", "reason for your call", "what are you calling about today"],
+      "requires_any": ["benefits", "claims", "prior authorization"],
+      "template": "claim status"
+    },
+    {
+      "id": "uhc_redirect_better_assist",
+      "type": "speak",
+      "prompt_contains": ["please specify whether your call is related to"],
+      "requires_any": ["Medical Behavioral Health", "dental", "prescription drugs", "vision"],
+      "template": "Medical Behavioral Health"
+    },
+    {
+      "id": "uhc_member_yes",
+      "type": "speak",
+      "prompt_contains": ["Are you a member"],
+      "template": "Yes"
+    },
+    {
+      "id": "uhc_redirect_plan",
+      "type": "speak",
+      "prompt_contains": ["Could you please tell me what type of plan you are calling about"],
+      "requires_any": ["Medicare Advantage", "Medicaid plan" , "individual" , "family plan" , "commercial plan"],
+      "template": "Medical Behavioral Health"
     },
     {
       "id": "uhc_healthcare_professional",

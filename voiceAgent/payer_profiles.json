@@ -3,32 +3,38 @@
     {
       "profile_name": "aetna_representative",
       "display_name": "Aetna",
-      "phone_number": "18006240756"
+      "phone_number": "18006240756",
+      "customer_data_file": "customer_data_aetna.xlsx"
     },
     {
       "profile_name": "Test_representative1",
       "display_name": "Rep1",
-      "phone_number": "18006240756"
+      "phone_number": "18006240756",
+      "customer_data_file": "customer_data_aetna.xlsx"
     },
     {
       "profile_name": "united_health_care",
       "display_name": "United Health Care",
-      "phone_number": "18778423210"
+      "phone_number": "18778423210",
+      "customer_data_file": "customer_data_uhc.xlsx"
     },
     {
       "profile_name": "Cigna",
       "display_name": "Cigna",
-      "phone_number": "18664283935"
+      "phone_number": "18664283935",
+      "customer_data_file": "customer_data_cigna.xlsx"
     },
     {
       "profile_name": "BCBS-marry land",
       "display_name": "BCBS-marry land",
-      "phone_number": "18008425975"
+      "phone_number": "18008425975",
+      "customer_data_file": "customer_data_bcbs.xlsx"
     },
     {
       "profile_name": "Humana",
       "display_name": "Humana",
-      "phone_number": "18005230023"
+      "phone_number": "18005230023",
+      "customer_data_file": "customer_data_humana.xlsx"
     }
   ]
 }

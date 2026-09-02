@@ -56,7 +56,7 @@ TELEPHONY_PROVIDER = (os.environ.get('TELEPHONY_PROVIDER', 'twilio') or 'twilio'
 try:
     CUSTOMER_CARE_SPEECH_TIMEOUT_SECONDS = str(max(1, min(int(os.environ.get('CUSTOMER_CARE_SPEECH_TIMEOUT_SECONDS', '3')), 10)))
 except (TypeError, ValueError):
-    CUSTOMER_CARE_SPEECH_TIMEOUT_SECONDS = '3'
+    CUSTOMER_CARE_SPEECH_TIMEOUT_SECONDS = '2'
 
 # Replace these with your actual Twilio credentials
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '').strip()
@@ -464,6 +464,34 @@ def save_text_file(path, text):
     with open(tmp_path, 'w', encoding='utf-8') as handle:
         handle.write(text or '')
     os.replace(tmp_path, path)
+
+
+def normalize_claim_id(value):
+    text = str(value or '').strip().upper()
+    if text.endswith('.0'):
+        text = text[:-2]
+    return re.sub(r'\s+', '', text)
+
+
+def dedupe_customer_rows_by_claim_id(rows):
+    """Return rows de-duplicated by claim_id. Rows without claim_id are kept."""
+    if not isinstance(rows, list):
+        return [], 0
+    seen = set()
+    deduped = []
+    duplicate_count = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        claim_id = normalize_claim_id(row.get('claim_id') or row.get('Claim ID') or row.get('claim id'))
+        if claim_id:
+            row['claim_id'] = claim_id
+            if claim_id in seen:
+                duplicate_count += 1
+                continue
+            seen.add(claim_id)
+        deduped.append(row)
+    return deduped, duplicate_count
 
 
 def is_passive_announcement_or_disclaimer(text):
@@ -1184,21 +1212,51 @@ def looks_like_rejection_reason_detail(text):
     return any(marker in normalized for marker in markers)
 
 
+def parse_money_amount(value):
+    """Parse payer-spoken currency while preserving normal decimal behavior.
+    Handles: $170.56, 170.56, 17056 -> 170.56, 30 and 12 cents -> 30.12.
+    """
+    import re
+    raw = str(value or '').strip().lower()
+    if not raw:
+        return None
+    raw = raw.replace('$', '').replace(',', '').strip()
+
+    cents_match = re.search(r'(\d+)\s+and\s+(\d{1,2})\s+cents?', raw)
+    if cents_match:
+        dollars = int(cents_match.group(1))
+        cents = int(cents_match.group(2))
+        return float(f"{dollars}.{cents:02d}")
+
+    match = re.search(r'\d+(?:\.\d{1,2})?', raw)
+    if not match:
+        return None
+    token = match.group(0)
+    if '.' in token:
+        return float(token)
+
+    # Speech transcription often drops decimal points for currency: 17056 -> 170.56.
+    # Keep small whole-dollar values as-is: 0, 15, 25, 30, 115.
+    if len(token) >= 4:
+        return round(float(token) / 100.0, 2)
+    return float(token)
+
+
 def extract_inline_audit_from_text(text, member_id, claim_status):
     """Extract the 9 audit fields from a spoken claim detail text block."""
     import re
     t = re.sub(r'\s+', ' ', str(text or ''))
     def amt(pattern):
         m = re.search(pattern, t, re.I)
-        return float(m.group(1)) if m else None
+        return parse_money_amount(m.group(1)) if m else None
     def dte(pattern):
         m = re.search(pattern, t, re.I)
         return m.group(1).strip() if m else None
     comp_date  = dte(r'completed on\s*([A-Za-z]+\s*\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4})')
-    allowable  = amt(r'allowable amount is\s*(?:\$)?(\d+(?:\.\d{2})?)')
-    paid       = amt(r'paid to the provider[^0-9]*(?:\$)?(\d+(?:\.\d{2})?)')
-    copay      = amt(r'co-payment amount[\s.]*(?:\$)?(\d+(?:\.\d{2})?)')
-    coins      = amt(r'co-insurance amount[\s.]*(?:\$)?(\d+(?:\.\d{2})?)')
+    allowable  = amt(r'allowable amount is[\s,]*(?:\$)?(\d+(?:\.\d{1,2})?|\d+\s+and\s+\d{1,2}\s+cents?)')
+    paid       = amt(r'paid to the provider[^0-9]*(?:\$)?(\d+(?:\.\d{1,2})?|\d+\s+and\s+\d{1,2}\s+cents?)')
+    copay      = amt(r'co-payment amount[\s.]*(?:\$)?(\d+(?:\.\d{1,2})?|\d+\s+and\s+\d{1,2}\s+cents?)')
+    coins      = amt(r'co-insurance amount[\s.]*(?:\$)?(\d+(?:\.\d{1,2})?|\d+\s+and\s+\d{1,2}\s+cents?)')
     issued     = dte(r'issued electronically on\s*([A-Za-z]+\s*\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4})')
     settled    = dte(r'settled on\s*([A-Za-z]+\s*\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4})')
     eft_m      = re.search(r'EFT[\s.]*Trace number is\s*([0-9\s,\.]+)', t, re.I)
@@ -2660,7 +2718,7 @@ def build_ivr_navigation_twiml(play_digits=''):
     return f'''
     <Response>
         {digit_block}
-        <Gather input="speech dtmf" action="{callback_url}/api/webhook/ivr_menu" method="POST" timeout="6" speechTimeout="3">
+        <Gather input="speech dtmf" action="{callback_url}/api/webhook/ivr_menu" method="POST" timeout="6" speechTimeout="2">
             <Pause length="20"/>
         </Gather>
         <Redirect method="POST">{callback_url}/api/webhook/ivr_menu</Redirect>
@@ -2677,7 +2735,7 @@ def build_customer_care_twiml(prompt_text, voice, followup=True, play_digits='')
     return f'''
     <Response>
         {digit_block}
-        <Gather input="speech dtmf" action="{callback_url}/api/webhook/speech" method="POST" timeout="8" speechTimeout="3">
+        <Gather input="speech dtmf" action="{callback_url}/api/webhook/speech" method="POST" timeout="8" speechTimeout="2">
             {prompt_block}
             <Pause length="60"/>
         </Gather>
@@ -3128,6 +3186,267 @@ def serve_index():
     return send_from_directory(BASE_DIR, 'index.html')
 
 
+@app.route('/api/download-template', methods=['GET'])
+def download_template():
+    """Download sample_file.xlsx as a template."""
+    try:
+        path = os.path.join(BASE_DIR, 'input')
+        return send_from_directory(path, 'sample_file.xlsx', as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 404
+
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Upload Excel, convert immediately to input/customer_data.json, then delete Excel."""
+    try:
+        payer = request.form.get('payer', '').strip()
+        if not payer:
+            return jsonify({'error': 'Payer parameter is required.'}), 400
+            
+        # Read payer_profiles.json fresh from disk
+        profile = None
+        try:
+            with open(PAYER_PROFILE_FILE, 'r', encoding='utf-8') as fh:
+                fresh_profiles = json.load(fh)
+            for p in fresh_profiles.get('profiles', []):
+                if str(p.get('profile_name') or '').strip() == payer:
+                    profile = p
+                    break
+        except Exception:
+            pass
+            
+        if not isinstance(profile, dict):
+            return jsonify({'error': f'Unknown payer: {payer}'}), 404
+            
+        data_file = str(profile.get('customer_data_file') or '').strip()
+        if not data_file:
+            return jsonify({'error': f'Payer {payer} has no customer_data_file configured.'}), 400
+            
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part in the request.'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file.'}), 400
+            
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({'error': 'Invalid file format. Only Excel files (.xlsx, .xls) are allowed.'}), 400
+            
+        target_path = os.path.join(BASE_DIR, 'input', data_file)
+        json_path = os.path.join(BASE_DIR, 'input', 'customer_data.json')
+
+        # Save upload to a temporary Excel path, convert to JSON, then delete the Excel.
+        import uuid as _uuid
+        tmp_path = f"{target_path}.tmp.{_uuid.uuid4().hex}"
+        try:
+            file.save(tmp_path)
+            from convertExcelToJson import convert_excel_to_json
+            convert_excel_to_json(tmp_path, json_path)
+
+            # Remove duplicate claim rows immediately after conversion.
+            with open(json_path, 'r', encoding='utf-8') as fh:
+                converted_rows = json.load(fh)
+            deduped_rows, duplicate_count = dedupe_customer_rows_by_claim_id(converted_rows)
+            save_json_file(json_path, deduped_rows)
+
+            # Reload runtime customer data immediately.
+            global CUSTOMER_DATA_FILE, CUSTOMER_DATA_INDEX
+            CUSTOMER_DATA_FILE = json_path
+            CUSTOMER_DATA_INDEX = load_customer_data_index()
+
+            logger.info('api_file_uploaded_converted payer=%s excel_temp=%s json=%s records=%s members=%s duplicates_removed=%s', payer, tmp_path, json_path, len(deduped_rows), len(CUSTOMER_DATA_INDEX), duplicate_count)
+            return jsonify({
+                'message': 'File uploaded and converted successfully!',
+                'json_file': 'customer_data.json',
+                'members': len(deduped_rows),
+                'duplicates_removed': duplicate_count,
+            }), 200
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                    logger.info('api_file_upload_temp_deleted path=%s', tmp_path)
+                except Exception as cleanup_exc:
+                    logger.warning('api_file_upload_temp_delete_failed path=%s error=%s', tmp_path, str(cleanup_exc))
+        
+    except Exception as exc:
+        logger.exception('api_file_upload_error error=%s', str(exc))
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/patients', methods=['GET'])
+def api_get_patients():
+    """
+    Return patient list from input/customer_data.json.
+    Query param: ?payer=aetna_representative
+    Columns returned: claim_id, member_id, member_name, provider_npi
+    """
+    try:
+        payer = request.args.get('payer', '').strip()
+        if not payer:
+            return jsonify({'error': 'payer param required'}), 400
+
+        json_path = os.path.join(BASE_DIR, 'input', 'customer_data.json')
+        if not os.path.exists(json_path):
+            logger.warning('api_get_patients_json_missing payer=%s path=%s', payer, json_path)
+            return jsonify([]), 200
+
+        with open(json_path, 'r', encoding='utf-8') as fh:
+            raw = json.load(fh)
+        rows = raw if isinstance(raw, list) else []
+
+        patients = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            claim_id = normalize_claim_id(row.get('claim_id') or row.get('Claim ID') or row.get('claim id'))
+            mid  = str(row.get('member_id') or row.get('Member ID') or '').strip()
+            name = str(row.get('member_name') or row.get('member_name') or row.get('Member Name') or '').strip()
+            npi  = str(row.get('provider_npi') or row.get('npi') or row.get('Provider NPI') or '').strip()
+            if not mid:
+                continue
+            patients.append({
+                'claim_id':     claim_id,
+                'member_id':    mid,
+                'member_name':  name,
+                'provider_npi': npi,
+            })
+
+        logger.info('api_get_patients payer=%s json=%s count=%s', payer, json_path, len(patients))
+        return jsonify(patients), 200
+
+    except Exception as exc:
+        logger.exception('api_get_patients_error error=%s', str(exc))
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/campaign-settings', methods=['GET'])
+def api_campaign_settings():
+    props = load_campaign_properties()
+    try:
+        batch_size = max(1, int(props.get('batch_size', '5')))
+    except Exception:
+        batch_size = 5
+    return jsonify({'batch_size': batch_size}), 200
+
+@app.route('/results', methods=['GET'])
+def serve_results():
+    from flask import make_response
+    resp = make_response(send_from_directory(BASE_DIR, 'results.html'))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
+
+
+@app.route('/api/results', methods=['GET'])
+def api_list_results():
+    """List all call artifact folders with summary data."""
+    try:
+        artifacts_root = os.path.join(CALL_ARTIFACTS_DIR, 'default')
+        if not os.path.isdir(artifacts_root):
+            return jsonify([]), 200
+
+        calls = []
+        for call_sid in sorted(os.listdir(artifacts_root), reverse=True):
+            call_dir = os.path.join(artifacts_root, call_sid)
+            if not os.path.isdir(call_dir):
+                continue
+
+            audit_path = os.path.join(call_dir, 'audit_results.json')
+            transcript_path = os.path.join(call_dir, 'interaction-transcript.json')
+
+            # Find recording file
+            recording_file = None
+            for f in os.listdir(call_dir):
+                if f.endswith('.mp3'):
+                    recording_file = f
+                    break
+
+            # Load audit summary
+            audits = []
+            if os.path.exists(audit_path):
+                try:
+                    with open(audit_path, 'r') as fh:
+                        audits = json.load(fh)
+                except Exception:
+                    pass
+
+            # Get call timestamp from transcript
+            call_time = None
+            if os.path.exists(transcript_path):
+                try:
+                    with open(transcript_path, 'r') as fh:
+                        transcript = json.load(fh)
+                        if transcript:
+                            call_time = transcript[0].get('timestamp')
+                except Exception:
+                    pass
+
+            calls.append({
+                'call_sid': call_sid,
+                'call_time': call_time,
+                'patient_count': len(audits),
+                'patients': [
+                    {
+                        'member_id': a.get('member_id'),
+                        'claim_status': a.get('claim_status'),
+                        'allowable_amount': a.get('allowable_amount'),
+                        'total_paid_amount': a.get('total_paid_amount'),
+                    } for a in audits
+                ],
+                'has_recording': recording_file is not None,
+                'has_transcript': os.path.exists(transcript_path),
+                'has_audit': os.path.exists(audit_path),
+            })
+
+        return jsonify(calls), 200
+    except Exception as exc:
+        logger.exception('api_list_results_error error=%s', str(exc))
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/results/<call_sid>/audit', methods=['GET'])
+def api_get_audit(call_sid):
+    """Return audit_results.json for a call."""
+    try:
+        call_dir = os.path.join(CALL_ARTIFACTS_DIR, 'default', call_sid)
+        audit_path = os.path.join(call_dir, 'audit_results.json')
+        if not os.path.exists(audit_path):
+            return jsonify([]), 200
+        with open(audit_path, 'r') as fh:
+            return jsonify(json.load(fh)), 200
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/results/<call_sid>/transcript', methods=['GET'])
+def api_get_transcript(call_sid):
+    """Return interaction-transcript.json for a call."""
+    try:
+        call_dir = os.path.join(CALL_ARTIFACTS_DIR, 'default', call_sid)
+        transcript_path = os.path.join(call_dir, 'interaction-transcript.json')
+        if not os.path.exists(transcript_path):
+            return jsonify([]), 200
+        with open(transcript_path, 'r') as fh:
+            return jsonify(json.load(fh)), 200
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/results/<call_sid>/recording', methods=['GET'])
+def api_get_recording(call_sid):
+    """Stream the MP3 recording for a call."""
+    try:
+        call_dir = os.path.join(CALL_ARTIFACTS_DIR, 'default', call_sid)
+        for f in os.listdir(call_dir):
+            if f.endswith('.mp3'):
+                return send_from_directory(call_dir, f, mimetype='audio/mpeg')
+        return jsonify({'error': 'Recording not found'}), 404
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
 @app.route('/static/<path:asset_path>', methods=['GET'])
 def serve_static_asset(asset_path):
     static_dir = os.path.join(BASE_DIR, 'static')
@@ -3142,6 +3461,7 @@ def load_campaign_properties():
     props_path = os.path.join(BASE_DIR, 'campaign.properties')
     props = {
         'call_delay': '5',
+        'batch_size': '5',
         'agent_voice': 'Polly.Joanna',
         'payer_profile': 'aetna_representative',
         'enable_recording': 'true',
@@ -3298,6 +3618,21 @@ def save_audit_results_json(audits, call_sid=None):
     if not audits:
         return
     try:
+        def audit_merge_key(audit):
+            claim_id = normalize_claim_id(audit.get('claim_id') or audit.get('Claim ID') or audit.get('claim id'))
+            if claim_id:
+                return f'CLAIM:{claim_id}'
+
+            member_id = normalize_member_id(audit.get('member_id'))
+            claim_number = str(audit.get('claim_number') or '').strip().upper()
+            completion_date = str(audit.get('claim_completion_date') or '').strip().upper()
+
+            if member_id and claim_number:
+                return f'MEMBER_CLAIM:{member_id}:{claim_number}'
+            if member_id and completion_date:
+                return f'MEMBER_DATE:{member_id}:{completion_date}'
+            return f'MEMBER:{member_id}'
+
         state = read_call_state(call_sid) if call_sid else {}
         storage_options = state.get('storage_options') or build_storage_options({})
         artifact_dir = get_artifact_call_dir(call_sid, storage_options) if call_sid else None
@@ -3318,24 +3653,25 @@ def save_audit_results_json(audits, call_sid=None):
             except Exception:
                 existing = []
 
-        # Merge: update existing entry for same member_id or append new
+        # Merge by claim_id first. Fall back to member/claim/date for older data.
         existing_index = {
-            str(e.get('member_id') or '').strip().upper(): i
+            audit_merge_key(e): i
             for i, e in enumerate(existing)
+            if audit_merge_key(e)
         }
         for audit in audits:
-            mid = str(audit.get('member_id') or '').strip().upper()
-            if not mid:
+            key = audit_merge_key(audit)
+            if not key:
                 continue
-            if mid in existing_index:
+            if key in existing_index:
                 # Update existing entry — prefer non-null incoming values
-                idx = existing_index[mid]
+                idx = existing_index[key]
                 for k, v in audit.items():
                     if v is not None:
                         existing[idx][k] = v
             else:
                 existing.append(audit)
-                existing_index[mid] = len(existing) - 1
+                existing_index[key] = len(existing) - 1
 
         import uuid as _uuid
         tmp_path = f"{output_path}.tmp.{_uuid.uuid4().hex}"
@@ -3355,6 +3691,48 @@ def save_audit_results_json(audits, call_sid=None):
 
     except Exception as exc:
         logger.error('AUDIT_JSON_SAVE_FAILED call_sid=%s error=%s', call_sid, str(exc))
+
+
+def enrich_audits_with_claim_ids(audits, batch_records, call_sid=''):
+    """Attach claim_id to extracted audits using the original batch records.
+    Prefer member_id uniqueness; fall back to remaining unmatched row order for ambiguous cases.
+    """
+    if not audits or not isinstance(audits, list):
+        return audits
+    records = [r for r in (batch_records or []) if isinstance(r, dict)]
+    if not records:
+        return audits
+
+    by_member = {}
+    for record in records:
+        mid = normalize_member_id(record.get('member_id') or record.get('Member ID'))
+        if not mid:
+            continue
+        by_member.setdefault(mid, []).append(record)
+
+    used_claims = set()
+    for audit in audits:
+        if normalize_claim_id(audit.get('claim_id')):
+            used_claims.add(normalize_claim_id(audit.get('claim_id')))
+            continue
+
+        mid = normalize_member_id(audit.get('member_id'))
+        candidates = [r for r in by_member.get(mid, []) if normalize_claim_id(r.get('claim_id') or r.get('Claim ID')) not in used_claims]
+
+        selected = None
+        if len(candidates) == 1:
+            selected = candidates[0]
+        elif len(candidates) > 1:
+            logger.warning('audit_claim_id_enrichment_ambiguous call_sid=%s member_id=%s candidates=%s', call_sid, mid, len(candidates))
+            selected = candidates[0]
+
+        if selected:
+            claim_id = normalize_claim_id(selected.get('claim_id') or selected.get('Claim ID'))
+            if claim_id:
+                audit['claim_id'] = claim_id
+                used_claims.add(claim_id)
+
+    return audits
 
 
 def run_in_process_excel_converter():
@@ -3394,25 +3772,33 @@ def make_call():
     # 1. Load campaign configurations from properties file first
     props = load_campaign_properties()
 
-    # 2. Check if we should dynamically run the Excel converter
-    run_converter = props.get('run_excel_converter', 'true').lower() in {'1', 'true', 'yes', 'on'}
-    if run_converter:
-        try:
-            # Run the excel parser in-process (fully blocking & synchronized!)
-            run_in_process_excel_converter()
-            
-            # Point to input/customer_data.json and reload in memory
-            new_customer_data_file = os.path.join(BASE_DIR, 'input', 'customer_data.json')
-            if os.path.exists(new_customer_data_file):
-                global CUSTOMER_DATA_FILE, CUSTOMER_DATA_INDEX
-                CUSTOMER_DATA_FILE = new_customer_data_file
-                CUSTOMER_DATA_INDEX = load_customer_data_index()
-                logger.info('api_call_customer_data_reloaded path=%s members=%s', CUSTOMER_DATA_FILE, len(CUSTOMER_DATA_INDEX))
-        except Exception as exc:
-            logger.exception('api_call_excel_conversion_failed error=%s', str(exc))
+    # 1b. Merge UI payload overrides (payer, selected patients)
+    payload = {}
+    try:
+        payload = request.get_json(silent=True) or {}
+    except Exception:
+        pass
+
+    # Override payer profile if sent from UI
+    if payload.get('payer_profile'):
+        props['payer_profile'] = str(payload['payer_profile']).strip()
+
+    # Selected claim IDs from UI. selected_member_ids is kept as a backward-compatible fallback.
+    selected_claim_ids = [normalize_claim_id(m) for m in (payload.get('selected_claim_ids') or []) if m]
+    selected_member_ids = [str(m).strip().upper() for m in (payload.get('selected_member_ids') or []) if m]
+
+    # 2. customer_data.json is prepared at upload time and is the runtime source of truth.
+    run_converter = False
+    new_customer_data_file = os.path.join(BASE_DIR, 'input', 'customer_data.json')
+    if os.path.exists(new_customer_data_file):
+        global CUSTOMER_DATA_FILE, CUSTOMER_DATA_INDEX
+        CUSTOMER_DATA_FILE = new_customer_data_file
+        CUSTOMER_DATA_INDEX = load_customer_data_index()
+        logger.info('api_call_customer_data_reloaded path=%s members=%s', CUSTOMER_DATA_FILE, len(CUSTOMER_DATA_INDEX))
     
     # 4. Extract campaign settings
     call_delay = int(props.get('call_delay', '5'))
+    batch_size = max(1, int(props.get('batch_size', '5')))
     voice = props.get('agent_voice', 'Polly.Joanna')
     selected_profile_name = props.get('payer_profile', 'aetna_representative')
     enable_recording = props.get('enable_recording', 'true').lower() in {'1', 'true', 'yes', 'on'}
@@ -3438,11 +3824,50 @@ def make_call():
         return jsonify({'error': f'Unknown payer profile "{selected_profile_name}".', 'code': 'PAYER_PROFILE_UNKNOWN', 'allowed_profiles': sorted(list(PAYER_PROFILES.keys()))}), 400
     to_number = str(selected_profile.get('phone_number') or '').strip()
 
-    # 6. Load contacts workbook and answers script from the input/ folder
-    contacts_path = os.path.join(BASE_DIR, 'input', props.get('contacts_file', 'contacts_sheet.xlsx'))
-    contacts = load_contacts_from_excel(contacts_path)
+    # 6. Load contacts from customer_data.json.
+    contacts_json_path = os.path.join(BASE_DIR, 'input', 'customer_data.json')
+    contacts = []
+    if os.path.exists(contacts_json_path):
+        try:
+            with open(contacts_json_path, 'r', encoding='utf-8') as fh:
+                raw = json.load(fh)
+            contacts = raw if isinstance(raw, list) else []
+        except Exception as exc:
+            logger.warning('api_call_customer_data_json_load_failed path=%s error=%s', contacts_json_path, str(exc))
+
     if not contacts:
-        return jsonify({'error': f'No contacts found in {contacts_path}. Please place your Excel/CSV workbook in the input folder.', 'code': 'CONTACTS_FILE_MISSING'}), 400
+        return jsonify({
+            'error': f'No contacts found in customer_data.json. Make sure "Fetch latest data" is checked or run the Excel converter first.',
+            'code': 'CONTACTS_FILE_MISSING'
+        }), 400
+
+    # Filter to only selected claims/patients if UI sent a specific list
+    if selected_claim_ids:
+        selected_claim_set = {m for m in selected_claim_ids if m}
+        contacts = [
+            c for c in contacts
+            if normalize_claim_id(c.get('claim_id') or c.get('Claim ID') or c.get('claim id')) in selected_claim_set
+        ]
+        logger.info('api_call_filtered_contacts_by_claim selected=%s matched=%s', len(selected_claim_set), len(contacts))
+        if not contacts:
+            return jsonify({
+                'error': 'None of the selected claims were found in customer_data.json.',
+                'code': 'NO_SELECTED_CLAIMS_FOUND',
+                'selected': list(selected_claim_set),
+            }), 400
+    elif selected_member_ids:
+        selected_upper = {str(m).strip().upper() for m in selected_member_ids if m}
+        contacts = [
+            c for c in contacts
+            if normalize_member_id(c.get('member_id') or extract_member_id_from_context(c)).upper() in selected_upper
+        ]
+        logger.info('api_call_filtered_contacts selected=%s matched=%s', len(selected_upper), len(contacts))
+        if not contacts:
+            return jsonify({
+                'error': 'None of the selected patients were found in customer_data.json.',
+                'code': 'NO_SELECTED_CONTACTS_FOUND',
+                'selected': list(selected_upper),
+            }), 400
 
     script_path = os.path.join(BASE_DIR, 'input', props.get('script_file', 'script.json'))
     all_answers_bank = load_script_from_file(script_path)
@@ -3453,6 +3878,7 @@ def make_call():
         contact_context = dict(contact_context)
         contact_context['ivr_profile'] = selected_profile_name
         contact_context['profile_name'] = selected_profile_name
+
 
     campaign_contact_queue = contacts[1:]
     active_member_id = normalize_member_id(contact_context.get('member_id') or extract_member_id_from_context(contact_context))
@@ -3509,7 +3935,7 @@ def make_call():
     try:
         twiml_instructions = f'''
         <Response>
-        <Gather input="speech dtmf" action="{callback_url}/api/webhook/speech" method="POST" timeout="8" speechTimeout="3">
+        <Gather input="speech dtmf" action="{callback_url}/api/webhook/speech" method="POST" timeout="8" speechTimeout="2">
                 <Pause length="20"/>
             </Gather>
             <Redirect method="POST">{callback_url}/api/webhook/speech</Redirect>
@@ -3556,6 +3982,7 @@ def make_call():
             'campaign_total_contacts': campaign_total_contacts,
             'campaign_remaining_contacts_after_current': remaining_contacts_after_current,
             'campaign_has_next_member': bool(remaining_contacts_after_current > 0),
+            'campaign_batch_records': contacts,
             'ivr_navigation': ivr_navigation_config,
             'ivr_department_selected': False,
             'ivr_submenu_selected': False,
@@ -3617,6 +4044,7 @@ def make_call():
             'ivr_matched_category': ivr_navigation_config.get('matched_category', ''),
             'ivr_matched_category_source': ivr_navigation_config.get('matched_category_source', ''),
             'run_excel_converter': run_converter,
+            'batch_size': batch_size,
         }), 200
     except Exception as e:
         logger.exception('api_call_error error=%s', str(e))
@@ -3717,17 +4145,19 @@ def extract_claim_details_via_python_script(interaction):
         comp_date_match = re.search(r'completed on\s*([A-Za-z]+\s*\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4})', full_text_clean, re.I)
         claim_comp_date = comp_date_match.group(1).strip() if comp_date_match else None
         
-        allow_match = re.search(r'allowable amount is\s*(?:\$)?(\d+(?:\.\d{2})?)', full_text_clean, re.I)
-        allowable_amt = float(allow_match.group(1)) if allow_match else None
+        amount_capture = r'(\d+(?:\.\d{1,2})?|\d+\s+and\s+\d{1,2}\s+cents?)'
+
+        allow_match = re.search(r'allowable amount is[\s,]*(?:\$)?' + amount_capture, full_text_clean, re.I)
+        allowable_amt = parse_money_amount(allow_match.group(1)) if allow_match else None
         
-        paid_match = re.search(r'paid to the provider[^0-9]*(?:\$)?(\d+(?:\.\d{2})?)', full_text_clean, re.I)
-        paid_amt = float(paid_match.group(1)) if paid_match else None
+        paid_match = re.search(r'paid to the provider[^0-9]*(?:\$)?' + amount_capture, full_text_clean, re.I)
+        paid_amt = parse_money_amount(paid_match.group(1)) if paid_match else None
         
-        copay_match = re.search(r'co-payment amount\s*(?:\$)?(\d+(?:\.\d{2})?)', full_text_clean, re.I)
-        copay_amt = float(copay_match.group(1)) if copay_match else None
+        copay_match = re.search(r'co-payment amount[\s.]*(?:\$)?' + amount_capture, full_text_clean, re.I)
+        copay_amt = parse_money_amount(copay_match.group(1)) if copay_match else None
         
-        coins_match = re.search(r'co-insurance amount\s*(?:\$)?(\d+(?:\.\d{2})?)', full_text_clean, re.I)
-        coins_amt = float(coins_match.group(1)) if coins_match else None
+        coins_match = re.search(r'co-insurance amount[\s.]*(?:\$)?' + amount_capture, full_text_clean, re.I)
+        coins_amt = parse_money_amount(coins_match.group(1)) if coins_match else None
         
         issued_match = re.search(r'issued electronically on\s*([A-Za-z]+\s*\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4})', full_text_clean, re.I)
         issued_date = issued_match.group(1).strip() if issued_match else None
@@ -3793,6 +4223,7 @@ def process_offline_claim_extraction(call_sid):
         if extracted_audits and isinstance(extracted_audits, dict):
             audits_list = extracted_audits.get('audits') or []
             if audits_list:
+                audits_list = enrich_audits_with_claim_ids(audits_list, state.get('campaign_batch_records') or [], call_sid=call_sid)
                 save_audit_results_json(audits_list, call_sid=call_sid)
                 logger.info('offline_audit_json_saved call_sid=%s patients=%s', call_sid, len(audits_list))
         else:
@@ -4373,7 +4804,7 @@ def ask_and_listen():
         unclear_prompt = safe_text(choose_non_repeating_fallback_reply(call_sid, '', {}))
         twiml_instructions = f'''
         <Response>
-            <Gather input="speech dtmf" numDigits="1" action="{callback_url}/api/webhook/speech" method="POST" timeout="5" speechTimeout="3">
+            <Gather input="speech dtmf" numDigits="1" action="{callback_url}/api/webhook/speech" method="POST" timeout="5" speechTimeout="2">
                 <Say voice="{voice}">{safe_question}</Say>
             </Gather>
             <Say voice="{voice}">{unclear_prompt}</Say>
@@ -4478,6 +4909,12 @@ def handle_speech():
                                             if normalize_member_id(a.get('member_id')) == current_member_id
                                         ]
                                         if patient_audits:
+                                            current_context = current_state.get('contact_context') or {}
+                                            current_claim_id = normalize_claim_id(current_context.get('claim_id') or current_context.get('Claim ID') or current_context.get('claim id'))
+                                            if current_claim_id and len(patient_audits) == 1:
+                                                for audit in patient_audits:
+                                                    audit['claim_id'] = current_claim_id
+                                            patient_audits = enrich_audits_with_claim_ids(patient_audits, current_state.get('campaign_batch_records') or [], call_sid=call_sid)
                                             save_audit_results_json(patient_audits, call_sid=call_sid)
                                             logger.info('audit_written_before_context_switch call_sid=%s member_id=%s', call_sid, current_member_id)
                                 except Exception as audit_exc:

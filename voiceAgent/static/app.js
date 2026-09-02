@@ -160,6 +160,14 @@
 
         loadPayerProfiles();
 
+        // ── Patient list state ───────────────────────────────────────
+        let allPatients = [];
+        let campaignBatches = [];
+        let activeBatchIndex = 0;
+        let configuredBatchSize = 5;
+
+        loadCampaignSettings();
+
         async function loadPayerProfiles() {
             try {
                 const { response, parsed } = await apiFetch('/api/payer-profiles', {}, 'payer_profiles');
@@ -185,12 +193,128 @@
                 const firstConfigured = profiles.find((p) => p && p.configured);
                 payerProfileSelect.value = String(firstConfigured?.profile_name || profiles[0]?.profile_name || '').trim();
                 if (payerProfileHint) payerProfileHint.innerText = 'Campaign will dial selected profile fixed number.';
+
+                // Load patients for the initially selected payer
+                await loadPatients(payerProfileSelect.value);
             } catch (error) {
                 if (payerProfileSelect) payerProfileSelect.innerHTML = '<option value="">Failed to load payer profiles</option>';
                 if (payerProfileHint) payerProfileHint.innerText = 'Unable to load payer profiles from backend.';
                 addLog(`Payer profile load failed: ${error.message}`, 'WARN');
             }
         }
+
+        async function loadCampaignSettings() {
+            try {
+                const { response, parsed } = await apiFetch('/api/campaign-settings', {}, 'campaign_settings');
+                if (response.ok && parsed?.batch_size) {
+                    configuredBatchSize = Math.max(1, Number(parsed.batch_size) || 5);
+                    addLog(`Campaign batch size loaded: ${configuredBatchSize}`, 'INFO');
+                }
+            } catch (error) {
+                addLog(`Unable to load campaign settings. Using batch size ${configuredBatchSize}.`, 'WARN');
+            }
+        }
+
+        // Reload patients whenever payer changes
+        if (payerProfileSelect) {
+            payerProfileSelect.addEventListener('change', () => {
+                loadPatients(payerProfileSelect.value);
+            });
+        }
+
+        // File Upload Listener
+        const fileUploadInput = document.getElementById('customerDataUpload');
+        if (fileUploadInput) {
+            fileUploadInput.addEventListener('change', async () => {
+                const file = fileUploadInput.files[0];
+                if (!file) return;
+
+                const payer = payerProfileSelect?.value;
+                if (!payer) {
+                    addLog("Cannot upload: no payer selected.", "ERROR");
+                    return;
+                }
+
+                addLog(`Uploading customer Excel data for ${payer}: ${file.name}...`, "INFO");
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('payer', payer);
+
+                try {
+                    const response = await fetch(`${API_BASE}/api/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const raw = await response.text();
+                    let parsed = null;
+                    try { parsed = JSON.parse(raw); } catch (e) {}
+
+                    if (response.ok) {
+                        addLog(`Upload success! JSON prepared: ${parsed?.json_file || 'customer_data.json'} (${parsed?.members || 0} records, duplicates removed: ${parsed?.duplicates_removed || 0})`, "SUCCESS");
+                        // Automatically reload the patient list from the newly uploaded file!
+                        await loadPatients(payer);
+                    } else {
+                        addLog(`Upload failed: ${parsed?.error || 'Unknown error'}`, "ERROR");
+                    }
+                } catch (err) {
+                    addLog(`Connection error during file upload: ${err.message}`, "ERROR");
+                } finally {
+                    // Reset file input so same file can be uploaded again if needed
+                    fileUploadInput.value = '';
+                }
+            });
+        }
+
+        async function loadPatients(payer) {
+            if (!payer) return;
+            const loadMsg  = document.getElementById('patientLoadingMsg');
+            const emptyMsg = document.getElementById('patientEmptyMsg');
+            const countLbl = document.getElementById('patientCountLabel');
+
+            if (loadMsg)  loadMsg.classList.remove('hidden');
+            if (emptyMsg) emptyMsg.classList.add('hidden');
+            if (countLbl) countLbl.textContent = '0 patients';
+            allPatients = [];
+
+            try {
+                const { response, parsed } = await apiFetch(`/api/patients?payer=${encodeURIComponent(payer)}`, {}, 'load_patients');
+                if (!response.ok || !Array.isArray(parsed) || !parsed.length) {
+                    if (loadMsg)  loadMsg.classList.add('hidden');
+                    if (emptyMsg) emptyMsg.classList.remove('hidden');
+                    if (countLbl) countLbl.textContent = '';
+                    updateStartBtn();
+                    return;
+                }
+                allPatients = parsed;
+                renderPatientTable();
+            } catch (e) {
+                addLog(`Load patients failed: ${e.message}`, 'WARN');
+            } finally {
+                if (loadMsg) loadMsg.classList.add('hidden');
+            }
+        }
+
+        function renderPatientTable() {
+            const countLbl = document.getElementById('patientCountLabel');
+            const batches = buildCampaignBatches(allPatients);
+            if (countLbl) countLbl.textContent = `${allPatients.length} claim${allPatients.length !== 1 ? 's' : ''} / ${batches.length} batch${batches.length !== 1 ? 'es' : ''}`;
+            updateStartBtn();
+        }
+
+        function getSelectedPatients() {
+            return allPatients;
+        }
+
+        function updateStartBtn() {
+            const count = allPatients.length;
+            const batches = buildCampaignBatches(allPatients);
+            const lbl = document.getElementById('startBtnLabel');
+            if (lbl) lbl.textContent = count > 0
+                ? `Start Campaign — ${count} claim${count !== 1 ? 's' : ''} / ${batches.length} batch${batches.length !== 1 ? 'es' : ''}`
+                : 'Start Calling Campaign';
+        }
+
 
         function updateLiveInsights(state) {
             const data = state || {};
@@ -200,19 +324,19 @@
             if (ivrPhase) ivrPhase.innerText = String(data.ivr_phase || '-').replace(/_/g, ' ');
             if (ivrLastHeard) ivrLastHeard.innerText = String(data.ivr_last_heard_text || '-');
             if (ivrLastDigit) ivrLastDigit.innerText = String(data.ivr_last_pressed_digit || '-');
-            const activeMemberId = String(data.active_member_id || data.contact_context?.member_id || '-').trim() || '-';
-            if (activeMemberIdStatus) activeMemberIdStatus.innerText = activeMemberId;
+            const activeClaimId = String(data.contact_context?.claim_id || data.contact_context?.['Claim ID'] || '-').trim() || '-';
+            if (activeMemberIdStatus) activeMemberIdStatus.innerText = activeClaimId;
             const queue = Array.isArray(data.campaign_contact_queue) ? data.campaign_contact_queue : [];
-            const memberIds = queue
-                .map((row) => String((row || {}).member_id || '').trim())
+            const claimIds = queue
+                .map((row) => String((row || {}).claim_id || (row || {})['Claim ID'] || '').trim())
                 .filter(Boolean);
             if (remainingMemberIdsStatus) {
-                remainingMemberIdsStatus.innerText = memberIds.length ? memberIds.join(', ') : '-';
+                remainingMemberIdsStatus.innerText = claimIds.length ? claimIds.join(', ') : '-';
             }
             const totalContacts = Number(data.campaign_total_contacts || contactsData.length || 1);
             const remaining = Number(data.campaign_remaining_contacts_after_current || queue.length || 0);
             const position = Math.max(1, totalContacts - remaining);
-            if (campaignProgress) campaignProgress.innerText = `Member ${position} of ${totalContacts}`;
+            if (campaignProgress) campaignProgress.innerText = `Batch ${activeBatchIndex + 1} of ${Math.max(campaignBatches.length, 1)} | Claim ${position} of ${totalContacts}`;
         }
 
         function emitTranscriptEvents(state) {
@@ -534,6 +658,20 @@
 
         startCallBtn.addEventListener('click', () => {
             addLog("Start Campaign button clicked.", "INFO");
+            if (!allPatients.length) {
+                addLog("No claims loaded. Upload an input file before starting.", "ERROR");
+                if (errorBox) {
+                    errorBox.classList.remove('hidden');
+                    errorBox.innerText = 'No claims loaded. Upload an input file before starting.';
+                }
+                return;
+            }
+            campaignBatches = buildCampaignBatches(allPatients);
+            activeBatchIndex = 0;
+            if (!campaignBatches.length) {
+                addLog("No valid batches could be created from uploaded data.", "ERROR");
+                return;
+            }
             
             formArea.classList.add('hidden');
             callArea.classList.remove('hidden'); callArea.classList.add('flex');
@@ -582,21 +720,59 @@
         });
 
         function triggerNextContactAuto() {
+            activeBatchIndex += 1;
+            if (activeBatchIndex < campaignBatches.length) {
+                addLog(`Starting next batch ${activeBatchIndex + 1} of ${campaignBatches.length}.`, "INFO");
+                makeTwilioCall();
+                return;
+            }
             addLog("Campaign Call Completed.", "SUCCESS");
             if (callStatusText) callStatusText.innerText = "Call completed.";
             if (targetDisplay) targetDisplay.innerText = "Campaign Finished";
-            if (contactTypeDisplay) contactTypeDisplay.innerText = "All members have been processed.";
+            if (contactTypeDisplay) contactTypeDisplay.innerText = "All claims have been processed.";
             if (callRing) callRing.className = "absolute inset-0 rounded-full border-4 border-slate-500 opacity-50";
             if (excelScriptArea) excelScriptArea.classList.add('hidden');
             if (nextContactBtn) nextContactBtn.classList.add('hidden');
         }
 
+        function buildCampaignBatches(records) {
+            const groups = new Map();
+            (records || []).forEach((row) => {
+                const npi = String(row.provider_npi || row.npi || 'UNKNOWN').trim() || 'UNKNOWN';
+                if (!groups.has(npi)) groups.set(npi, []);
+                groups.get(npi).push(row);
+            });
+
+            const batches = [];
+            groups.forEach((rows, npi) => {
+                for (let i = 0; i < rows.length; i += configuredBatchSize) {
+                    batches.push({ provider_npi: npi, records: rows.slice(i, i + configuredBatchSize) });
+                }
+            });
+            return batches;
+        }
+
         async function makeTwilioCall() {
             try {
+                // Build payload — one safe batch per call, max 5 claims with the same NPI.
+                const selected = getSelectedPatients();
+                const selectedPayer = payerProfileSelect?.value || '';
+                if (!campaignBatches.length) {
+                    campaignBatches = buildCampaignBatches(selected);
+                    activeBatchIndex = 0;
+                }
+                const batch = campaignBatches[activeBatchIndex] || { provider_npi: '', records: [] };
+
+                const payload = {
+                    payer_profile: selectedPayer,
+                    selected_claim_ids: batch.records.map(p => p.claim_id).filter(Boolean),
+                    selected_member_ids: batch.records.map(p => p.member_id).filter(Boolean),
+                };
+
                 const { response, parsed } = await apiFetch('/api/call', {
-                    method: 'POST', 
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify(payload)
                 }, 'start_call');
                 
                 const data = parsed || {};
@@ -604,6 +780,9 @@
                 if (response.ok) {
                     currentCallSid = data.call_sid;
                     lastTranscriptCount = 0;
+                    if (campaignProgress) {
+                        campaignProgress.innerText = `Batch ${activeBatchIndex + 1} of ${campaignBatches.length} | ${batch.records.length} claim${batch.records.length !== 1 ? 's' : ''} | NPI ${batch.provider_npi || '-'}`;
+                    }
                     if (recordingStatus) {
                         recordingStatus.innerText = data.recording_enabled ? 'enabled' : '';
                     }
@@ -822,18 +1001,13 @@
                             targetDisplay.innerText = prof.phone_number || '-';
                         }
                     }
-                    if (data.active_member_id) {
-                        let text = `Member ID: ${data.active_member_id}`;
-                        if (data.contact_context && data.contact_context['Member Name']) {
-                            text += ` (${data.contact_context['Member Name']})`;
-                        }
-                        if (contactTypeDisplay) {
-                            contactTypeDisplay.innerText = text;
-                        }
+                    if (data.contact_context) {
+                        const claimId = data.contact_context.claim_id || data.contact_context['Claim ID'] || '-';
+                        if (contactTypeDisplay) contactTypeDisplay.innerText = `Claim ID: ${claimId}`;
                     }
 
                     if (propConverterVal) {
-                        propConverterVal.innerText = data.run_excel_converter ? "Yes" : "No";
+                        propConverterVal.innerText = data.active_member_id ? "Yes" : "-";
                     }
                     if (propPayerVal) {
                         const profileRaw = data.selected_profile_name || "";
@@ -958,18 +1132,13 @@
                             targetDisplay.innerText = prof.phone_number || '-';
                         }
                     }
-                    if (data.active_member_id) {
-                        let text = `Member ID: ${data.active_member_id}`;
-                        if (data.contact_context && data.contact_context['Member Name']) {
-                            text += ` (${data.contact_context['Member Name']})`;
-                        }
-                        if (contactTypeDisplay) {
-                            contactTypeDisplay.innerText = text;
-                        }
+                    if (data.contact_context) {
+                        const claimId = data.contact_context.claim_id || data.contact_context['Claim ID'] || '-';
+                        if (contactTypeDisplay) contactTypeDisplay.innerText = `Claim ID: ${claimId}`;
                     }
 
                     if (propConverterVal) {
-                        propConverterVal.innerText = data.run_excel_converter ? "Yes" : "No";
+                        propConverterVal.innerText = data.active_member_id ? "Yes" : "-";
                     }
                     if (propPayerVal) {
                         const profileRaw = data.selected_profile_name || "";
@@ -980,6 +1149,13 @@
 
                     const hasNewLastAnswer = !!data.last_answer_text && data.last_answer_text !== (lastPolledState?.last_answer_text || '');
                     updateLiveInsights(data);
+
+                    if (data.status === 'call_ended') {
+                        clearInterval(pollingInterval);
+                        addLog(`Batch ${activeBatchIndex + 1} completed.`, 'SUCCESS');
+                        setTimeout(() => triggerNextContactAuto(), 1000);
+                        return;
+                    }
 
                     if (data.status === 'answered' || (data.status === 'customer_care_listening' && hasNewLastAnswer)) {
                         clearInterval(pollingInterval);
@@ -1004,7 +1180,7 @@
                 if (signature !== lastInsightSignature) {
                     addLog(`Customer care question handled using ${source}.`, source === 'uploaded_json' || source === 'contacts_sheet' ? 'SUCCESS' : 'AI_GEMINI');
                     addLog(`Question="${data.last_question_from_customer_care || data.last_speech || ''}"`, 'INFO');
-                    addLog(`Answer="${data.last_answer_text || ''}" member_id=${data.active_member_id || data.contact_context?.member_id || ''} digit=${data.menu_digit || ''}`, 'INFO');
+                    addLog(`Answer="${data.last_answer_text || ''}" claim_id=${data.contact_context?.claim_id || data.contact_context?.['Claim ID'] || ''} digit=${data.menu_digit || ''}`, 'INFO');
                     if (data.answer_consistency && data.answer_consistency.status === 'warning') {
                         addLog(`Answer consistency warning: ${(data.answer_consistency.flags || []).join(', ') || 'unknown'}`, 'WARN');
                     }

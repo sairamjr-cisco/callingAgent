@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="/Users/sairamjonagadla/Documents/calling-agent"
-SRC_DIR="/Users/sairamjonagadla/Documents/voiceAgent_working_31_Aug"
+SRC_DIR="/Users/sairamjonagadla/Documents/calling-agent/voiceAgent"
 TEMP_DIR="$ROOT/temp_deploy"
 ZIP_OUT="$ROOT/calling-agent-production.zip"
 
@@ -26,6 +26,7 @@ cp "$SRC_DIR/campaign.properties" "$TEMP_DIR/voiceAgent/"
 cp "$SRC_DIR/payer_profiles.json" "$TEMP_DIR/voiceAgent/"
 cp "$SRC_DIR/requirements.txt" "$TEMP_DIR/voiceAgent/"
 cp "$SRC_DIR/index.html" "$TEMP_DIR/voiceAgent/"
+cp "$SRC_DIR/results.html" "$TEMP_DIR/voiceAgent/"
 cp "$SRC_DIR/run_local.sh" "$TEMP_DIR/voiceAgent/"
 
 # Copy prompt files dynamically
